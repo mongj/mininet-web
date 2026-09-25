@@ -193,7 +193,7 @@ export function App() {
             <Alert variant="destructive">
               <AlertTitle>Boot failed</AlertTitle>
               <AlertDescription>
-                The guest did not reach a shell. Boot again to retry.
+                Error: {vm.error ?? 'unknown. Boot again to retry.'}
               </AlertDescription>
             </Alert>
           </div>

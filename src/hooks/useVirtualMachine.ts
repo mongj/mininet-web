@@ -7,10 +7,12 @@ export type Phase =
 interface SessionState {
   phase: Phase;
   progress: number | null;
+  error: string | null;
 }
 const INITIAL_STATE: SessionState = {
   phase: 'idle',
   progress: null,
+  error: null,
 };
 const ANSI_ESCAPE = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const SHELL_INSTRUCTIONS = `BROWSER_LAB_READY
@@ -32,6 +34,17 @@ function toTerminalText(text: string) {
 function isClearEcho(text: string) {
   const stripped = text.replace(ANSI_ESCAPE, '').replace(/\r/g, '');
   return stripped.trim() === '' || stripped === 'browser-lab:~# ';
+}
+
+function describeUnknownError(error: unknown): string | null {
+  if (error instanceof Error) return error.message.trim() || null;
+  if (typeof error === 'string') return error.trim() || null;
+  return null;
+}
+
+function kernelPanicMessage(serial: string): string {
+  const match = serial.match(/Kernel panic - not syncing:[^\n\r]*/);
+  return match?.[0]?.trim() || 'Kernel panic - not syncing';
 }
 
 export function useVirtualMachine(
@@ -67,10 +80,15 @@ export function useVirtualMachine(
     let ignoreClearEchoUntil = 0;
     let welcomeTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const fail = () => {
+    const fail = (message?: string | null) => {
       if (welcomeTimer !== undefined) clearTimeout(welcomeTimer);
       stop();
-      setState((current) => ({ ...current, phase: 'error', progress: null }));
+      setState((current) => ({
+        ...current,
+        phase: 'error',
+        progress: null,
+        error: message?.trim() || null,
+      }));
     };
 
     const finishWelcome = () => {
@@ -93,14 +111,15 @@ export function useVirtualMachine(
         { type: 'module' },
       );
       worker.current = instance;
-      instance.onerror = () => {
-        if (worker.current === instance) fail();
+      instance.onerror = (event) => {
+        if (worker.current !== instance) return;
+        fail(describeUnknownError(event.error) ?? event.message);
       };
       instance.onmessage = ({ data }: MessageEvent<WorkerEvent>) => {
         if (worker.current !== instance) return;
         switch (data.type) {
           case 'error':
-            fail();
+            fail(data.message);
             return;
           case 'progress':
             setState((current) => ({
@@ -120,7 +139,7 @@ export function useVirtualMachine(
             tail = (tail + data.text).slice(-20_000);
             const clean = tail.replace(ANSI_ESCAPE, '');
             if (clean.includes('Kernel panic - not syncing:')) {
-              fail();
+              fail(kernelPanicMessage(clean));
               return;
             }
 
@@ -172,8 +191,8 @@ export function useVirtualMachine(
         ).href,
         options: loadEmulatorOptions(),
       } satisfies WorkerCommand);
-    } catch {
-      fail();
+    } catch (error) {
+      fail(describeUnknownError(error));
     }
   }, [onClearScreen, onSerial, stop]);
 
