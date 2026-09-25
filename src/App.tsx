@@ -43,7 +43,7 @@ function phaseStatus(phase: Phase): {
     case 'idle':
       return { label: 'Ready to boot', variant: 'outline' };
     case 'downloading':
-      return { label: 'Downloading', variant: 'secondary' };
+      return { label: 'Downloading image', variant: 'secondary' };
     case 'booting':
       return { label: 'Booting', variant: 'secondary' };
     case 'shell':
