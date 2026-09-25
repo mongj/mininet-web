@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#191919" />
+    <meta
+      name="description"
+      content="An instant virtual network in your browser."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mininet Web Playground" />
+    <meta property="og:title" content="Mininet Web Playground" />
+    <meta
+      property="og:description"
+      content="An instant virtual network in your browser."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Mininet Web Playground: an instant virtual network in your browser."
+    />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mininet Web Playground" />
+    <meta
+      name="twitter:description"
+      content="An instant virtual network in your browser."
+    />
+    <meta name="twitter:image" content="/og.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Mininet Web Playground: an instant virtual network in your browser."
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="favicon-96x96.png?v=20260925"
+      sizes="96x96"
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20260925" />
+    <link rel="shortcut icon" href="favicon.ico?v=20260925" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="apple-touch-icon.png?v=20260925"
+    />
+    <meta name="apple-mobile-web-app-title" content="Mininet Web" />
+    <link rel="manifest" href="site.webmanifest?v=20260925" />
+    <title>Mininet Web Playground</title>
+    <script>
+      document.documentElement.classList.toggle(
+        'dark',
+        localStorage.theme === 'dark' ||
+          (!('theme' in localStorage) &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches),
+      );
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
