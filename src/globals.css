@@ -4,7 +4,16 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:not(:is(.light, .light *)) {
+      @slot;
+    }
+  }
+  &:is(.dark, .dark *) {
+    @slot;
+  }
+}
 
 @theme inline {
   --font-heading: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
@@ -44,6 +53,7 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-terminal: var(--terminal);
+  --color-terminal-foreground: var(--terminal-foreground);
   --height-terminal: var(--terminal-height);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -55,6 +65,17 @@
 }
 
 :root {
+  --terminal: #111111;
+  --terminal-foreground: oklch(0.985 0 0);
+  --terminal-cursor: oklch(0.922 0 0);
+  --terminal-selection: oklch(0.269 0 0);
+  --terminal-muted-foreground: oklch(0.708 0 0);
+  --terminal-height: clamp(22rem, 54vh, 45rem);
+}
+
+:root,
+.light {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -87,13 +108,47 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --terminal: #f4f4f4;
-  --terminal-cursor: var(--primary);
-  --terminal-selection: var(--muted);
-  --terminal-height: clamp(22rem, 54vh, 45rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+    --background: #191919;
+    --foreground: oklch(0.985 0 0);
+    --card: #191919;
+    --card-foreground: oklch(0.985 0 0);
+    --popover: #191919;
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: #191919;
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
 }
 
 .dark {
+  color-scheme: dark;
   --background: #191919;
   --foreground: oklch(0.985 0 0);
   --card: #191919;
@@ -125,9 +180,6 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-  --terminal: #111111;
-  --terminal-cursor: var(--primary);
-  --terminal-selection: var(--muted);
 }
 
 @layer base {
@@ -152,6 +204,20 @@
    * never hold the card open after that box shrinks again. `--terminal-height`
    * is only a floor for small viewports.
    */
+  .terminal-surface {
+    color-scheme: dark;
+    background-color: var(--terminal);
+    color: var(--terminal-foreground);
+    --background: var(--terminal);
+    --foreground: var(--terminal-foreground);
+    --muted: var(--terminal-selection);
+    --muted-foreground: var(--terminal-muted-foreground);
+    --primary: var(--terminal-cursor);
+    --primary-foreground: oklch(0.205 0 0);
+    --accent: var(--terminal-selection);
+    --accent-foreground: var(--terminal-foreground);
+  }
+
   .terminal-host {
     @apply relative min-h-terminal flex-1;
     background-color: var(--terminal);

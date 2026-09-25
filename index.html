@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#191919" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#ffffff"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#191919"
+    />
     <meta
       name="description"
       content="An instant virtual network in your browser."
@@ -51,14 +60,6 @@
     <meta name="apple-mobile-web-app-title" content="Mininet Web" />
     <link rel="manifest" href="site.webmanifest?v=20260925" />
     <title>Mininet Web Playground</title>
-    <script>
-      document.documentElement.classList.toggle(
-        'dark',
-        localStorage.theme === 'dark' ||
-          (!('theme' in localStorage) &&
-            window.matchMedia('(prefers-color-scheme: dark)').matches),
-      );
-    </script>
   </head>
   <body>
     <div id="root"></div>

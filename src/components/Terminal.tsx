@@ -21,11 +21,10 @@ function readToken(name: string): string {
 
 function readTerminalTheme() {
   return {
-    background: readToken('--terminal') || readToken('--background'),
-    foreground: readToken('--foreground'),
-    cursor: readToken('--terminal-cursor') || readToken('--primary'),
-    selectionBackground:
-      readToken('--terminal-selection') || readToken('--muted'),
+    background: readToken('--terminal') || '#111111',
+    foreground: readToken('--terminal-foreground') || '#fafafa',
+    cursor: readToken('--terminal-cursor') || '#e5e5e5',
+    selectionBackground: readToken('--terminal-selection') || '#404040',
   };
 }
 
@@ -83,18 +82,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       observer.observe(container.current);
       document.addEventListener('fullscreenchange', refit);
 
-      const root = document.documentElement;
-      const themeObserver = new MutationObserver(() => {
-        instance.options.theme = readTerminalTheme();
-      });
-      themeObserver.observe(root, {
-        attributes: true,
-        attributeFilter: ['class'],
-      });
-
       return () => {
         document.removeEventListener('fullscreenchange', refit);
-        themeObserver.disconnect();
         observer.disconnect();
         input.dispose();
         instance.dispose();

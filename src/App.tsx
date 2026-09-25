@@ -197,7 +197,7 @@ export function App() {
           </div>
         ) : null}
 
-        <CardContent className="relative -mx-(--card-spacing) flex min-h-0 flex-1 flex-col">
+        <CardContent className="terminal-surface relative -mx-(--card-spacing) flex min-h-0 flex-1 flex-col">
           {vm.phase === 'downloading' ? (
             <Progress
               aria-label="Linux download progress"

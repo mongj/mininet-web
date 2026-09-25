@@ -8,12 +8,7 @@ import './globals.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      disableTransitionOnChange
-      enableSystem
-    >
+    <ThemeProvider>
       <TooltipProvider>
         <App />
       </TooltipProvider>
