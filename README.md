@@ -1,4 +1,4 @@
-# Mininet Web Playground
+# Mininet Web
 
 ![Mininet Web Playground: an instant virtual network in your browser.](public/og.png)
 
