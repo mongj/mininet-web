@@ -4,6 +4,7 @@ import type { GuestManifest, WorkerCommand, WorkerEvent } from './messages';
 let emulator: Emulator | undefined;
 let starting = false;
 let output = '';
+let flushTimer: ReturnType<typeof setInterval> | undefined;
 
 function emit(event: WorkerEvent) {
   self.postMessage(event);
@@ -15,16 +16,38 @@ function flush() {
   output = '';
 }
 
-const flushTimer = setInterval(flush, 24);
+function onSerialByte(byte: number) {
+  output += String.fromCharCode(byte);
+  if (output.length > 4096) flush();
+}
+
+function armFlush() {
+  if (flushTimer !== undefined) return;
+  flushTimer = setInterval(flush, 24);
+}
 
 function fail(error: unknown) {
   flush();
-  clearInterval(flushTimer);
+  if (flushTimer !== undefined) {
+    clearInterval(flushTimer);
+    flushTimer = undefined;
+  }
   emit({
     type: 'error',
     message: error instanceof Error ? error.message : String(error),
   });
 }
+
+async function stopEmulator() {
+  const current = emulator;
+  if (!current) return;
+  emulator = undefined;
+  current.remove_listener('serial0-output-byte', onSerialByte);
+  output = '';
+  await current.destroy();
+}
+
+armFlush();
 
 async function readBody(
   response: Response,
@@ -65,6 +88,8 @@ async function start(assetBase: string) {
   starting = true;
 
   try {
+    await stopEmulator();
+    armFlush();
     const url = (file: string) => new URL(file, assetBase).href;
     async function asset(file: string) {
       const response = await fetch(url(file));
@@ -137,12 +162,16 @@ async function start(assetBase: string) {
       disable_mouse: true,
       disable_keyboard: true,
     });
-    emulator.add_listener('serial0-output-byte', (byte) => {
-      output += String.fromCharCode(byte);
-      if (output.length > 4096) flush();
-    });
+    emulator.add_listener('serial0-output-byte', onSerialByte);
   } catch (error) {
+    try {
+      await stopEmulator();
+    } catch (stopError) {
+      console.error(stopError);
+    }
     fail(error);
+  } finally {
+    starting = false;
   }
 }
 
