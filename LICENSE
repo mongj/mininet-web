@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Ming Jun
+Copyright (c) 2026 mongj
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-The MIT License applies to the original source in this repository. Third-party
-components under public/vm/ and inside the guest image keep their own licenses.
-See README.md, "Third-party software".
