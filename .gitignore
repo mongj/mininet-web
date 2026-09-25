@@ -10,3 +10,10 @@ dist/
 .dev.vars*
 verification/
 .cursor/
+
+# Copied from node_modules by scripts/vendor-assets.mjs
+public/vm/libv86.mjs
+public/vm/v86.wasm
+public/vm/v86.LICENSE
+public/vm/xterm.LICENSE
+public/vm/addon-fit.LICENSE
