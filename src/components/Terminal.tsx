@@ -67,27 +67,19 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
       instance.loadAddon(fit);
       instance.open(container.current);
       terminal.current = instance;
-      const clearInlineHeights = () => {
-        const host = container.current;
-        if (!host) return;
-        const nodes = host.querySelectorAll<HTMLElement>(
-          '.xterm, .xterm-screen, .xterm-viewport, .xterm-scrollable-element',
-        );
-        for (const node of nodes) {
-          node.style.removeProperty('height');
-          node.style.removeProperty('min-height');
-          node.style.removeProperty('max-height');
-        }
+      // A resize makes xterm re-measure the glyph cell, so the rows the first
+      // fit chose can overflow the host when the cell grew (for example after
+      // the web font swapped in). Fitting again settles on the new cell size.
+      const settle = () => {
+        fit.fit();
+        fit.fit();
       };
       const refit = () => {
-        clearInlineHeights();
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => fit.fit());
-        });
+        requestAnimationFrame(settle);
       };
-      fit.fit();
+      settle();
       const input = instance.onData(onInput);
-      const observer = new ResizeObserver(() => fit.fit());
+      const observer = new ResizeObserver(settle);
       observer.observe(container.current);
       document.addEventListener('fullscreenchange', refit);
 

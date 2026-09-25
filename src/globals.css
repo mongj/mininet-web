@@ -145,10 +145,15 @@
     @apply underline decoration-dashed underline-offset-2 hover:text-primary;
   }
 
+  /*
+   * The host is sized purely by the flex layout (fill the card) and never by
+   * xterm's content: `.xterm` is taken out of flow so that the rows FitAddon
+   * produced for a bigger box (fullscreen, a taller window, a font swap) can
+   * never hold the card open after that box shrinks again. `--terminal-height`
+   * is only a floor for small viewports.
+   */
   .terminal-host {
-    flex: 1;
-    min-height: 0;
-    height: auto;
+    @apply relative min-h-terminal flex-1;
     background-color: var(--terminal);
   }
 
@@ -161,28 +166,19 @@
     width: 100%;
     height: 100%;
     border-radius: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  [data-console]:fullscreen [data-slot='card-content'],
-  [data-console]:-webkit-full-screen [data-slot='card-content'] {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
   [data-console]:fullscreen .terminal-host,
   [data-console]:-webkit-full-screen .terminal-host {
-    flex: 1;
     min-height: 0;
-    max-height: none;
-    height: 100%;
   }
 }
 
-/* Unlayered so these beat xterm.css `#000` backgrounds. */
+/* Unlayered so these beat xterm.css `position: relative` and `#000` backgrounds. */
+.terminal-host > .xterm {
+  @apply absolute inset-0;
+}
+
 .terminal-host .xterm,
 .terminal-host .xterm .xterm-viewport,
 .terminal-host .xterm .xterm-screen,
