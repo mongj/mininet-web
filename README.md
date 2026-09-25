@@ -19,7 +19,7 @@ Vite serves the app at `http://127.0.0.1:5173`. Click **Boot** to start the gues
 
 ## Manual Cloudflare deployment
 
-`wrangler.jsonc` configures a Worker named `mininet-browser-lab` with [Workers Static Assets and SPA fallback](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/). It has no server-side entrypoint, API, bindings, or secrets. Change the Worker name before deploying if needed. The deployment will use the Cloudflare account selected by your Wrangler authentication.
+`wrangler.jsonc` configures a Worker named `mininet-web` with [Workers Static Assets and SPA fallback](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/). It has no server-side entrypoint, API, bindings, or secrets. Change the Worker name before deploying if needed. The deployment will use the Cloudflare account selected by your Wrangler authentication.
 
 ```sh
 # Inspect packaging locally; this does not deploy.

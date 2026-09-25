@@ -3462,9 +3462,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mininet-in-the-browser@workspace:.":
+"mininet-web@workspace:.":
   version: 0.0.0-use.local
-  resolution: "mininet-in-the-browser@workspace:."
+  resolution: "mininet-web@workspace:."
   dependencies:
     "@base-ui/react": "npm:1.8.0"
     "@fontsource-variable/geist": "npm:5.3.0"

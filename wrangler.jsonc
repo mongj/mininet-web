@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mininet-browser-lab",
+  "name": "mininet-web",
   "compatibility_date": "2026-09-24",
   "build": {
     "command": "yarn build",
