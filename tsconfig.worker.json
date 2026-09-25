@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./.cache/tsconfig.worker.tsbuildinfo",
+    "lib": ["ES2022", "WebWorker"]
+  },
+  "include": ["src/vm/emulator.worker.ts", "src/vm/messages.ts"],
+  "exclude": []
+}

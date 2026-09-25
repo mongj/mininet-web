@@ -1,0 +1,12 @@
+node_modules/
+.yarn/
+dist/
+.wrangler/
+.cache/
+.DS_Store
+.env
+.env.*
+!.env.example
+.dev.vars*
+verification/
+.cursor/
