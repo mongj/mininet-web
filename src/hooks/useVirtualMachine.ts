@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { loadEmulatorOptions } from '@/lib/emulator-settings';
 import type { WorkerCommand, WorkerEvent } from '../vm/messages';
 
 export type Phase =
@@ -169,6 +170,7 @@ export function useVirtualMachine(
           `${import.meta.env.BASE_URL}vm/`,
           window.location.href,
         ).href,
+        options: loadEmulatorOptions(),
       } satisfies WorkerCommand);
     } catch {
       fail();

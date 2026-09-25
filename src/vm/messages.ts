@@ -1,5 +1,8 @@
+import type { EmulatorOptions } from './emulator-options';
+
 export type WorkerCommand =
-  { type: 'start'; assetBase: string } | { type: 'input'; text: string };
+  | { type: 'start'; assetBase: string; options: EmulatorOptions }
+  | { type: 'input'; text: string };
 
 export type WorkerEvent =
   | { type: 'progress'; loaded: number; total: number }

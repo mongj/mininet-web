@@ -1,4 +1,8 @@
 import type { V86 as Emulator } from 'v86';
+import {
+  sanitizeEmulatorOptions,
+  type EmulatorOptions,
+} from './emulator-options';
 import type { GuestManifest, WorkerCommand, WorkerEvent } from './messages';
 
 let emulator: Emulator | undefined;
@@ -83,7 +87,7 @@ async function readBody(
   return bytes.buffer;
 }
 
-async function start(assetBase: string) {
+async function start(assetBase: string, rawOptions: EmulatorOptions) {
   if (starting) return;
   starting = true;
 
@@ -147,20 +151,21 @@ async function start(assetBase: string) {
       ),
     );
     emit({ type: 'booting' });
+    const options = sanitizeEmulatorOptions(rawOptions);
+    console.info('v86 options', options);
     emulator = new V86({
       wasm_path: url('v86.wasm'),
-      memory_size: 256 * 1024 * 1024,
-      vga_memory_size: 2 * 1024 * 1024,
+      memory_size: options.memory_size,
+      vga_memory_size: options.vga_memory_size,
       bios: { buffer: bios },
       vga_bios: { buffer: vgaBios },
       bzimage: { buffer: kernel },
       initrd: { buffer: initrd.buffer },
-      cmdline:
-        'console=ttyS0,115200 rdinit=/init random.trust_cpu=on tsc=reliable mitigations=off',
+      cmdline: options.cmdline,
       autostart: true,
-      disable_speaker: true,
-      disable_mouse: true,
-      disable_keyboard: true,
+      disable_speaker: options.disable_speaker,
+      disable_mouse: options.disable_mouse,
+      disable_keyboard: options.disable_keyboard,
     });
     emulator.add_listener('serial0-output-byte', onSerialByte);
   } catch (error) {
@@ -176,7 +181,7 @@ async function start(assetBase: string) {
 }
 
 self.onmessage = ({ data }: MessageEvent<WorkerCommand>) => {
-  if (data.type === 'start') void start(data.assetBase);
+  if (data.type === 'start') void start(data.assetBase, data.options);
   else emulator?.serial0_send(data.text);
 };
 

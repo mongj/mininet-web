@@ -4,6 +4,10 @@
     "tsBuildInfoFile": "./.cache/tsconfig.worker.tsbuildinfo",
     "lib": ["ES2022", "WebWorker"]
   },
-  "include": ["src/vm/emulator.worker.ts", "src/vm/messages.ts"],
+  "include": [
+    "src/vm/emulator.worker.ts",
+    "src/vm/emulator-options.ts",
+    "src/vm/messages.ts"
+  ],
   "exclude": []
 }

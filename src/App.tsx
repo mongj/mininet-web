@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Credits } from '@/components/Credits';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { Terminal, type TerminalHandle } from '@/components/Terminal';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge, badgeVariants } from '@/components/ui/badge';
@@ -98,7 +99,7 @@ export function App() {
 
   return (
     <main className="mx-auto flex min-h-svh max-w-7xl flex-col gap-6 p-8">
-      <header className="flex min-h-16 items-center justify-between gap-4">
+      <header className="flex min-h-16 items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="flex items-center gap-3 text-xl font-medium tracking-tight">
             Mininet Web Playground
@@ -128,6 +129,7 @@ export function App() {
             reduces the barrier for people to learn about networks and SDN :)
           </p>
         </div>
+        <SettingsDialog />
       </header>
 
       <Card
