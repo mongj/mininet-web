@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+mkdir -p /dev /proc /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mkdir -p /dev/pts /run/openvswitch /var/run/openvswitch
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /tmp
+hostname browser-lab
+ip link set lo up
+modprobe veth
+modprobe bridge
+modprobe openvswitch
+modprobe sch_netem
+ovsdb-tool create /etc/openvswitch/conf.db /usr/share/openvswitch/vswitch.ovsschema
+ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --detach
+ovs-vsctl --no-wait init
+ovs-vswitchd --pidfile --detach
+export TERM=xterm-256color
+export PS1='browser-lab:~# '
+echo 'BROWSER_LAB_READY'
+cat <<'EOF'
+Linux is ready. Mininet and Open vSwitch are installed in this guest.
+
+Demo network (hosts h1 and h2, switch s1):
+  python3 /root/lab.py
+
+That opens the Mininet CLI. Try nodes, net, pingall, and help.
+exit returns to this shell.
+
+Or start your own topology:
+  mn --switch ovsbr --controller none --topo single,2
+EOF
+while true; do
+  setsid --ctty /bin/bash --noprofile --norc </dev/ttyS0 >/dev/ttyS0 2>&1 || true
+  echo "Restarting the Linux console."
+done
