@@ -17,7 +17,8 @@ let all = '',
 const start = Date.now();
 const vm = new V86({
   wasm_path: path.join(root, 'v86.wasm'),
-  memory_size: 256 * 1024 * 1024,
+  // vim's runtime does not unpack into the 240 MiB the guest sees at 256 MiB.
+  memory_size: 512 * 1024 * 1024,
   vga_memory_size: 2 * 1024 * 1024,
   bios: image('seabios.bin'),
   vga_bios: image('vgabios.bin'),
@@ -27,6 +28,7 @@ const vm = new V86({
     'console=ttyS0,115200 rdinit=/init random.trust_cpu=on tsc=reliable mitigations=off',
   autostart: true,
   disable_speaker: true,
+  uart1: true,
 });
 vm.add_listener('serial0-output-byte', (b) => {
   const c = String.fromCharCode(b);
@@ -58,11 +60,11 @@ async function command(s) {
   return atPrompt(s, /mininet> $/);
 }
 async function sh(s) {
-  return atPrompt(s, /browser-lab:~# $/, 30000);
+  return atPrompt(s, /mininet-web:~# $/, 30000);
 }
 (async () => {
   try {
-    await waitFor(/browser-lab:~# $/);
+    await waitFor(/mininet-web:~# $/);
     const editors = await sh(
       'command -v vim && command -v nano && echo EDITORS_OK',
     );
@@ -87,11 +89,13 @@ async function sh(s) {
     await command('link h1 s1 up');
     assert.match(await command('pingall 1'), /0% dropped \(2\/2 received\)/);
     assert.match(await command('sh ovs-ofctl dump-flows s1'), /actions=NORMAL/);
+    const iperf = await atPrompt('iperf h1 h2', /mininet> $/, 120000);
+    assert.match(iperf, /\*\*\* Results: \['[^']+\/sec', '[^']+\/sec'\]/);
     const from = all.length;
     vm.serial0_send('exit\n');
-    await waitFor(/browser-lab:~# $/, from, 30000);
+    await waitFor(/mininet-web:~# $/, from, 30000);
     console.log(
-      `\nPASS: Mininet ping, distinct namespaces, OVS ports, link failure/recovery, OpenFlow table, CLI exit (${((Date.now() - start) / 1000).toFixed(1)}s)`,
+      `\nPASS: Mininet ping, distinct namespaces, OVS ports, link failure/recovery, OpenFlow table, iperf, CLI exit (${((Date.now() - start) / 1000).toFixed(1)}s)`,
     );
     vm.destroy();
     process.exit(0);
