@@ -124,7 +124,7 @@ export function SettingsDialog() {
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <section className="grid gap-2 mt-2">
+        <section className="mt-2 grid gap-2">
           <h3 className="text-sm font-medium">Appearance</h3>
           <div
             role="radiogroup"

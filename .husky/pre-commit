@@ -1,0 +1,5 @@
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+yarn format
+if [ -n "$staged" ]; then
+  printf '%s\n' "$staged" | git add --pathspec-from-file=-
+fi

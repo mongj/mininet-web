@@ -5,6 +5,7 @@
   "license": "MIT",
   "packageManager": "yarn@4.9.2",
   "scripts": {
+    "prepare": "husky",
     "dev": "yarn prepare:assets && vite",
     "build": "yarn typecheck && yarn prepare:assets && vite build && node scripts/verify-assets.mjs",
     "typecheck": "tsc -b",
@@ -22,6 +23,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
+    "husky": "9.1.7",
     "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
     "typescript": "5.9.3",
