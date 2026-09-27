@@ -14,6 +14,12 @@ modprobe veth
 modprobe bridge
 modprobe openvswitch
 modprobe sch_netem
+modprobe 8021q
+modprobe dummy
+modprobe af_packet
+modprobe iptable_nat
+modprobe iptable_filter
+modprobe xt_MASQUERADE
 ovsdb-tool create /etc/openvswitch/conf.db /usr/share/openvswitch/vswitch.ovsschema
 ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --detach
 ovs-vsctl --no-wait init

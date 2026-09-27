@@ -32,9 +32,17 @@ RUN apk add --no-cache \
     tcpdump=4.99.5-r0 \
     iperf3=3.17.1-r0 \
     inetutils-telnet=2.5-r0 \
+    ethtool=6.11-r0 \
+    iptables=1.8.11-r1 \
+    iptables-legacy=1.8.11-r1 \
+    traceroute=2.1.6-r0 \
     coreutils=9.5-r2 \
     nano=8.2-r0 \
     vim=9.1.1105-r0
+# Mininet NAT shells out to `iptables -t nat`. Alpine's nft iptables needs
+# nf_tables; the legacy binary matches Mininet and the xtables modules we keep.
+RUN ln -sf iptables-legacy /usr/sbin/iptables \
+    && ln -sf ip6tables-legacy /usr/sbin/ip6tables
 # alpine:3.21 only ships iperf 2.2.0. Mininet 2.3.0 needs 2.0.13's server report.
 RUN apk add --no-cache \
     --repository https://dl-cdn.alpinelinux.org/alpine/v3.12/main \
