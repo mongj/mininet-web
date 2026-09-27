@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const MiB = 1024 * 1024;
-const CHUNK_SIZE = 16 * MiB;
+const CHUNK_SIZE = 8 * MiB;
 const OUTPUT_DIR = 'public/vm';
 const MANIFEST_PATH = `${OUTPUT_DIR}/guest.json`;
 

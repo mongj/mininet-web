@@ -127,38 +127,54 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
       await asset('guest.json')
     ).json()) as GuestManifest;
     const initrd = new Uint8Array(manifest.bytes);
-    let offset = 0;
+    const loadedBytes = manifest.chunks.map(() => 0);
+    const starts: number[] = [];
+    let cursor = 0;
+    for (const chunk of manifest.chunks) {
+      starts.push(cursor);
+      cursor += chunk.bytes;
+    }
+    if (cursor !== manifest.bytes)
+      throw new Error('The Linux image is incomplete.');
     emit({ type: 'progress', loaded: 0, total: manifest.bytes });
 
-    for (const chunk of manifest.chunks) {
-      const bytes = await readBody(await asset(chunk.file), (loaded) => {
-        emit({
-          type: 'progress',
-          loaded: offset + loaded,
-          total: manifest.bytes,
-        });
+    const report = () => {
+      const loaded = loadedBytes.reduce((sum, value) => sum + value, 0);
+      emit({
+        type: 'progress',
+        loaded: Math.min(loaded, manifest.bytes),
+        total: manifest.bytes,
       });
-      const digest = await crypto.subtle.digest('SHA-256', bytes);
-      const hash = Array.from(new Uint8Array(digest), (value) =>
-        value.toString(16).padStart(2, '0'),
-      ).join('');
-      if (bytes.byteLength !== chunk.bytes || hash !== chunk.sha256) {
-        throw new Error(
-          'The Linux image failed its integrity check. Reset the lab to retry.',
-        );
-      }
-      initrd.set(new Uint8Array(bytes), offset);
-      offset += bytes.byteLength;
-      emit({ type: 'progress', loaded: offset, total: manifest.bytes });
-    }
-    if (offset !== manifest.bytes)
-      throw new Error('The Linux image is incomplete.');
+    };
 
-    const [bios, vgaBios, kernel] = await Promise.all(
-      ['seabios.bin', 'vgabios.bin', 'vmlinuz'].map(async (file) =>
-        (await asset(file)).arrayBuffer(),
+    const [[bios, vgaBios, kernel]] = await Promise.all([
+      Promise.all(
+        ['seabios.bin', 'vgabios.bin', 'vmlinuz'].map(async (file) =>
+          (await asset(file)).arrayBuffer(),
+        ),
       ),
-    );
+      Promise.all(
+        manifest.chunks.map(async (chunk, index) => {
+          const start = starts[index];
+          const bytes = await readBody(await asset(chunk.file), (loaded) => {
+            loadedBytes[index] = Math.min(loaded, chunk.bytes);
+            report();
+          });
+          const digest = await crypto.subtle.digest('SHA-256', bytes);
+          const hash = Array.from(new Uint8Array(digest), (value) =>
+            value.toString(16).padStart(2, '0'),
+          ).join('');
+          if (bytes.byteLength !== chunk.bytes || hash !== chunk.sha256) {
+            throw new Error(
+              'The Linux image failed its integrity check. Reset the lab to retry.',
+            );
+          }
+          initrd.set(new Uint8Array(bytes), start);
+          loadedBytes[index] = bytes.byteLength;
+          report();
+        }),
+      ),
+    ]);
     emit({ type: 'booting' });
     const options = sanitizeEmulatorOptions(rawOptions);
     console.info('v86 options', options);
