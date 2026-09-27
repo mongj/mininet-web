@@ -25,7 +25,9 @@ ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --detach
 ovs-vsctl --no-wait init
 ovs-vswitchd --pidfile --detach
 export TERM=xterm-256color
-export PS1='mininet-web:~# '
+export PS1='\h:\w\$ '
+export HOME=/root
+cd /root
 clear
 cat <<'EOF'
 Linux is ready. Mininet and Open vSwitch are installed in this guest.
