@@ -20,9 +20,17 @@ function flush() {
   output = '';
 }
 
-function onSerialByte(byte: number) {
+function onSerial0Output(byte: number) {
   output += String.fromCharCode(byte);
   if (output.length > 4096) flush();
+}
+
+function onSerial1Output(byte: number) {
+  switch (byte) {
+    case 0x01:
+      emit({ type: 'ready' });
+      break;
+  }
 }
 
 function armFlush() {
@@ -46,7 +54,8 @@ async function stopEmulator() {
   const current = emulator;
   if (!current) return;
   emulator = undefined;
-  current.remove_listener('serial0-output-byte', onSerialByte);
+  current.remove_listener('serial0-output-byte', onSerial0Output);
+  current.remove_listener('serial1-output-byte', onSerial1Output);
   output = '';
   await current.destroy();
 }
@@ -166,8 +175,10 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
       disable_speaker: options.disable_speaker,
       disable_mouse: options.disable_mouse,
       disable_keyboard: options.disable_keyboard,
+      uart1: true,
     });
-    emulator.add_listener('serial0-output-byte', onSerialByte);
+    emulator.add_listener('serial0-output-byte', onSerial0Output);
+    emulator.add_listener('serial1-output-byte', onSerial1Output);
   } catch (error) {
     try {
       await stopEmulator();

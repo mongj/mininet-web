@@ -68,8 +68,7 @@ export function App() {
     (text: string) => terminal.current?.write(text),
     [],
   );
-  const clearScreen = useCallback(() => terminal.current?.clear(), []);
-  const vm = useVirtualMachine(write, clearScreen);
+  const vm = useVirtualMachine(write);
   const canBoot = vm.phase === 'idle' || vm.phase === 'error';
   const booted = vm.phase === 'shell' || vm.phase === 'mininet';
   const status = phaseStatus(vm.phase);
@@ -223,7 +222,7 @@ export function App() {
                   <EmptyDescription>
                     {vm.phase === 'error'
                       ? 'Discard this session and reboot.'
-                      : 'Boot and start a Linux shell in the terminal. The first boot may take around 30 seconds.'}
+                      : 'Boot and start a Linux shell in the terminal. The first boot may take longer as the image is being downloaded and unpacked.'}
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>

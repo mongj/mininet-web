@@ -8,7 +8,7 @@ mount -t sysfs sysfs /sys
 mkdir -p /dev/pts /run/openvswitch /var/run/openvswitch
 mount -t devpts devpts /dev/pts
 mount -t tmpfs tmpfs /tmp
-hostname browser-lab
+hostname mininet-web
 ip link set lo up
 modprobe veth
 modprobe bridge
@@ -19,8 +19,8 @@ ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --detach
 ovs-vsctl --no-wait init
 ovs-vswitchd --pidfile --detach
 export TERM=xterm-256color
-export PS1='browser-lab:~# '
-echo 'BROWSER_LAB_READY'
+export PS1='mininet-web:~# '
+clear
 cat <<'EOF'
 Linux is ready. Mininet and Open vSwitch are installed in this guest.
 
@@ -33,6 +33,10 @@ exit returns to this shell.
 Or start your own topology:
   mn --switch ovsbr --controller none --topo single,2
 EOF
+
+# Send a ready signal via uart1 side channel to the v86 emulator worker
+printf '\001' >/dev/ttyS1
+
 while true; do
   setsid --ctty /bin/bash --noprofile --norc </dev/ttyS0 >/dev/ttyS0 2>&1 || true
   echo "Restarting the Linux console."

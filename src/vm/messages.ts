@@ -7,6 +7,7 @@ export type WorkerCommand =
 export type WorkerEvent =
   | { type: 'progress'; loaded: number; total: number }
   | { type: 'booting' }
+  | { type: 'ready' }
   | { type: 'serial'; text: string }
   | { type: 'error'; message: string };
 
