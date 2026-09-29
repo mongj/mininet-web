@@ -1,18 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadEmulatorOptions } from '@/lib/emulator-settings';
-import type { WorkerCommand, WorkerEvent } from '../vm/messages';
+import type { StorageReason, WorkerCommand, WorkerEvent } from '../vm/messages';
+import {
+  clearPlaygroundStorage,
+  type ClearPlaygroundResult,
+} from '../vm/opfs-storage';
 
 export type Phase =
   'idle' | 'downloading' | 'booting' | 'shell' | 'mininet' | 'error';
+
+export type StorageState =
+  { persistent: true } | { persistent: false; reason: StorageReason } | null;
+
 interface SessionState {
   phase: Phase;
   progress: number | null;
   error: string | null;
+  storage: StorageState;
 }
 const INITIAL_STATE: SessionState = {
   phase: 'idle',
   progress: null,
   error: null,
+  storage: null,
 };
 
 const STOP_TIMEOUT_MS = 2000;
@@ -26,6 +36,29 @@ function describeUnknownError(error: unknown): string | null {
 function kernelPanicMessage(serial: string): string {
   const match = serial.match(/Kernel panic - not syncing:[^\n\r]*/);
   return match?.[0]?.trim() || 'Kernel panic - not syncing';
+}
+
+function storageFromEvent(
+  event: Extract<WorkerEvent, { type: 'storage' }>,
+): StorageState {
+  return event.persistent
+    ? { persistent: true }
+    : { persistent: false, reason: event.reason };
+}
+
+let persistenceRequested = false;
+
+function requestPersistentStorage(): void {
+  if (persistenceRequested || !navigator.storage?.persist) return;
+  persistenceRequested = true;
+  void (async () => {
+    try {
+      if (await navigator.storage.persisted()) return;
+      await navigator.storage.persist();
+    } catch (error) {
+      console.error(error);
+    }
+  })();
 }
 
 async function shutdownWorker(instance: Worker) {
@@ -152,6 +185,13 @@ export function useVirtualMachine(onSerial: (text: string) => void) {
                 progress: null,
               }));
               return;
+            case 'storage':
+              if (data.persistent) requestPersistentStorage();
+              setState((current) => ({
+                ...current,
+                storage: storageFromEvent(data),
+              }));
+              return;
             case 'serial': {
               tail = (tail + data.text).slice(-20_000);
               if (tail.includes('Kernel panic - not syncing:')) {
@@ -184,5 +224,25 @@ export function useVirtualMachine(onSerial: (text: string) => void) {
     });
   }, [enqueue, onSerial, stop]);
 
-  return { ...state, start, send };
+  const resetSavedFiles =
+    useCallback(async (): Promise<ClearPlaygroundResult> => {
+      let shouldRestart = false;
+      let result: ClearPlaygroundResult = 'unavailable';
+
+      try {
+        await enqueue(async () => {
+          shouldRestart = worker.current !== null;
+          const instance = worker.current;
+          worker.current = null;
+          if (instance) await shutdownWorker(instance);
+          result = await clearPlaygroundStorage();
+          if (!shouldRestart && result === 'cleared') setState(INITIAL_STATE);
+        });
+      } finally {
+        if (shouldRestart) void start();
+      }
+      return result;
+    }, [enqueue, start]);
+
+  return { ...state, start, send, resetSavedFiles };
 }

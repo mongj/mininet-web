@@ -53,7 +53,7 @@ scripts/                     Asset packaging and headless VM verification
 wrangler.jsonc               Manual Workers deployment configuration
 ```
 
-The network starts in OVS standalone learning mode; no SDN controller is bundled. The shell starts in `/root/playground` (`~/playground`). Do also note that changes inside the VM are not persisted.
+The network starts in OVS standalone learning mode; no SDN controller is bundled. The shell starts in `/root/playground` (`~/playground`); files there are saved in the browser; the rest of the guest filesystem is not persisted.
 
 ## Checks
 

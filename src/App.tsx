@@ -4,6 +4,7 @@ import {
   Minimize2Icon,
   RotateCwIcon,
   TerminalIcon,
+  TriangleAlertIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Credits } from '@/components/Credits';
@@ -35,6 +36,45 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { type Phase, useVirtualMachine } from '@/hooks/useVirtualMachine';
+import type { StorageReason } from '@/vm/messages';
+
+function storageWarning(reason: StorageReason): {
+  title: string;
+  body: string;
+} {
+  switch (reason) {
+    case 'locked':
+      return {
+        title: 'Mininet Web is already open in another tab',
+        body: 'Your saved playground files are in use over there, so this session will use in-memory storage instead. Changes here will be lost when you reload. Close the other tab and restart to use your saved files.',
+      };
+    case 'unavailable':
+      return {
+        title: 'Persistent storage is not available',
+        body: 'The platform uses OPFS for persistent storage, but your browser does not support it. As such, this session will use in-memory storage. Changes will be lost when you reload.',
+      };
+    case 'mount-failed':
+      return {
+        title: 'Saved files could not be mounted',
+        body: 'Linux could not open your saved playground files, so this session will use in-memory storage. Changes will be lost when you reload.',
+      };
+    default: {
+      const exhaustive: never = reason;
+      return exhaustive;
+    }
+  }
+}
+
+function StorageWarning({ reason }: { reason: StorageReason }) {
+  const warning = storageWarning(reason);
+  return (
+    <Alert variant="warning">
+      <TriangleAlertIcon />
+      <AlertTitle>{warning.title}</AlertTitle>
+      <AlertDescription>{warning.body}</AlertDescription>
+    </Alert>
+  );
+}
 
 function phaseStatus(phase: Phase): {
   label: string;
@@ -128,7 +168,13 @@ export function App() {
             reduces the barrier for people to learn about networks and SDN :)
           </p>
         </div>
-        <SettingsDialog />
+        <SettingsDialog
+          onClearSavedFiles={
+            vm.storage?.persistent === false && vm.storage.reason === 'locked'
+              ? undefined
+              : vm.resetSavedFiles
+          }
+        />
       </header>
 
       <Card
@@ -195,6 +241,12 @@ export function App() {
                 Error: {vm.error ?? 'unknown. Boot again to retry.'}
               </AlertDescription>
             </Alert>
+          </div>
+        ) : null}
+
+        {vm.storage?.persistent === false ? (
+          <div className="px-(--card-spacing)">
+            <StorageWarning reason={vm.storage.reason} />
           </div>
         ) : null}
 

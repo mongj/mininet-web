@@ -31,6 +31,7 @@ import {
   VGA_MEMORY_MB_MAX,
   VGA_MEMORY_MB_MIN,
 } from '@/vm/emulator-options';
+import type { ClearPlaygroundResult } from '@/vm/opfs-storage';
 
 const APPEARANCE_OPTIONS: ReadonlyArray<{
   id: ThemePreference;
@@ -67,22 +68,57 @@ function isEmulatorDraftDirty(
   );
 }
 
-export function SettingsDialog() {
+function clearErrorMessage(result: Exclude<ClearPlaygroundResult, 'cleared'>) {
+  switch (result) {
+    case 'busy':
+      return 'Saved files are in use by another tab. Try again later.';
+    case 'unavailable':
+      return 'Saved files are not available in this browser.';
+    default: {
+      const exhaustive: never = result;
+      return exhaustive;
+    }
+  }
+}
+
+export function SettingsDialog({
+  onClearSavedFiles,
+}: {
+  onClearSavedFiles?: () => Promise<ClearPlaygroundResult>;
+}) {
   const [open, setOpen] = useState(false);
   const { appearance, setAppearance } = useAppearance();
   const [saved, setSaved] = useState(loadEmulatorSettings);
   const [memoryInput, setMemoryInput] = useState(String(saved.memoryMb));
   const [vgaInput, setVgaInput] = useState(String(saved.vgaMemoryMb));
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   const dirty = isEmulatorDraftDirty(saved, memoryInput, vgaInput);
 
   useEffect(() => {
     if (!open) return;
+    setClearError(null);
     const loaded = loadEmulatorSettings();
     setSaved(loaded);
     setMemoryInput(String(loaded.memoryMb));
     setVgaInput(String(loaded.vgaMemoryMb));
   }, [open]);
+
+  async function handleClearSavedFiles() {
+    if (!onClearSavedFiles || clearing) return;
+    setClearing(true);
+    setClearError(null);
+    try {
+      const result = await onClearSavedFiles();
+      if (result === 'cleared') setOpen(false);
+      else setClearError(clearErrorMessage(result));
+    } catch {
+      setClearError('Could not clear saved files.');
+    } finally {
+      setClearing(false);
+    }
+  }
 
   function handleSave() {
     try {
@@ -196,6 +232,30 @@ export function SettingsDialog() {
             </div>
           </div>
         </section>
+
+        {onClearSavedFiles ? (
+          <>
+            <Separator />
+            <section className="grid gap-2">
+              <h3 className="text-sm font-medium">Saved files</h3>
+              <p className="text-xs text-muted-foreground">
+                Remove files saved in /root/playground and restore the demo
+                lab.py. The lab reboots if it is running.
+              </p>
+              <Button
+                disabled={clearing}
+                onClick={() => void handleClearSavedFiles()}
+                type="button"
+                variant="destructive"
+              >
+                Clear saved files
+              </Button>
+              {clearError ? (
+                <p className="text-xs text-destructive">{clearError}</p>
+              ) : null}
+            </section>
+          </>
+        ) : null}
 
         <div className="flex items-center gap-3">
           {dirty ? (

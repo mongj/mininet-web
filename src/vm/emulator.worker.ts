@@ -4,11 +4,21 @@ import {
   type EmulatorOptions,
 } from './emulator-options';
 import type { GuestManifest, WorkerCommand, WorkerEvent } from './messages';
+import { Opfs9pServer } from './9p/server';
+import { requestPlaygroundLock } from './opfs-storage';
 
 let emulator: Emulator | undefined;
 let starting = false;
 let output = '';
 let flushTimer: ReturnType<typeof setInterval> | undefined;
+let playground: { server: Opfs9pServer; releaseLock: () => void } | undefined;
+// Set while the host serves the playground and waits for the guest's mount result.
+let awaitingGuestMount = false;
+
+// Side-channel bytes the guest writes to serial1; see guest/init.
+const SERIAL1_READY = 0x01;
+const SERIAL1_PLAYGROUND_MOUNTED = 0x02;
+const SERIAL1_PLAYGROUND_NOT_MOUNTED = 0x03;
 
 function emit(event: WorkerEvent) {
   self.postMessage(event);
@@ -27,8 +37,21 @@ function onSerial0Output(byte: number) {
 
 function onSerial1Output(byte: number) {
   switch (byte) {
-    case 0x01:
+    case SERIAL1_READY:
       emit({ type: 'ready' });
+      break;
+    case SERIAL1_PLAYGROUND_MOUNTED:
+    case SERIAL1_PLAYGROUND_NOT_MOUNTED:
+      if (!awaitingGuestMount) break;
+      awaitingGuestMount = false;
+      if (byte === SERIAL1_PLAYGROUND_MOUNTED) {
+        emit({ type: 'storage', persistent: true });
+        break;
+      }
+      emit({ type: 'storage', persistent: false, reason: 'mount-failed' });
+      releasePlayground().catch((error: unknown) => {
+        console.error(error);
+      });
       break;
   }
 }
@@ -50,14 +73,54 @@ function fail(error: unknown) {
   });
 }
 
+async function releasePlayground() {
+  const current = playground;
+  playground = undefined;
+  awaitingGuestMount = false;
+  if (!current) return;
+  try {
+    await current.server.close();
+  } finally {
+    current.releaseLock();
+  }
+}
+
+async function attachPlayground(): Promise<Opfs9pServer | undefined> {
+  let releaseLock: (() => void) | null;
+  try {
+    releaseLock = await requestPlaygroundLock();
+  } catch (error) {
+    console.error(error);
+    emit({ type: 'storage', persistent: false, reason: 'unavailable' });
+    return undefined;
+  }
+  if (!releaseLock) {
+    emit({ type: 'storage', persistent: false, reason: 'locked' });
+    return undefined;
+  }
+  try {
+    const server = await Opfs9pServer.open();
+    playground = { server, releaseLock };
+    awaitingGuestMount = true;
+    return server;
+  } catch (error) {
+    console.error(error);
+    releaseLock();
+    emit({ type: 'storage', persistent: false, reason: 'unavailable' });
+    return undefined;
+  }
+}
+
 async function stopEmulator() {
   const current = emulator;
-  if (!current) return;
   emulator = undefined;
-  current.remove_listener('serial0-output-byte', onSerial0Output);
-  current.remove_listener('serial1-output-byte', onSerial1Output);
-  output = '';
-  await current.destroy();
+  if (current) {
+    current.remove_listener('serial0-output-byte', onSerial0Output);
+    current.remove_listener('serial1-output-byte', onSerial1Output);
+    output = '';
+    await current.destroy();
+  }
+  await releasePlayground();
 }
 
 armFlush();
@@ -178,6 +241,7 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
     emit({ type: 'booting' });
     const options = sanitizeEmulatorOptions(rawOptions);
     console.info('v86 options', options);
+    const server = await attachPlayground();
     emulator = new V86({
       wasm_path: url('v86.wasm'),
       memory_size: options.memory_size,
@@ -192,6 +256,9 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
       disable_mouse: options.disable_mouse,
       disable_keyboard: options.disable_keyboard,
       uart1: true,
+      filesystem: server
+        ? { handle9p: (req, reply) => server.handle(req, reply) }
+        : undefined,
     });
     emulator.add_listener('serial0-output-byte', onSerial0Output);
     emulator.add_listener('serial1-output-byte', onSerial1Output);
