@@ -18,7 +18,6 @@ const start = Date.now();
 const results = [];
 const vm = new V86({
   wasm_path: path.join(root, 'v86.wasm'),
-  // vim's runtime does not unpack into the 240 MiB the guest sees at 256 MiB.
   memory_size: 512 * 1024 * 1024,
   vga_memory_size: 2 * 1024 * 1024,
   bios: image('seabios.bin'),

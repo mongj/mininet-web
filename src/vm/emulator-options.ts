@@ -18,7 +18,7 @@ export interface EmulatorOptions {
 }
 
 export const DEFAULT_EMULATOR_OPTIONS: EmulatorOptions = {
-  memory_size: 256 * MB,
+  memory_size: 512 * MB,
   vga_memory_size: 2 * MB,
   disable_speaker: true,
   disable_mouse: true,

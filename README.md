@@ -81,7 +81,7 @@ yarn build
 
 ## Runtime footprint
 
-The download is approximately 37 MiB. The VM uses 256 MiB of configured guest RAM, plus emulator and browser overhead. All Mininet hosts share one guest kernel. Performance and packet timings are influenced by CPU emulation and browser scheduling.
+The download is approximately 37 MiB. The VM uses 512 MiB of configured guest RAM, plus emulator and browser overhead. All Mininet hosts share one guest kernel. Performance and packet timings are influenced by CPU emulation and browser scheduling.
 
 ## License
 
