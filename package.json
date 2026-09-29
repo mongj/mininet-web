@@ -9,6 +9,7 @@
     "dev": "yarn prepare:assets && vite",
     "build": "yarn typecheck && yarn prepare:assets && vite build && node scripts/verify-assets.mjs",
     "typecheck": "tsc -b",
+    "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "wrangler dev --ip 127.0.0.1 --port 8787",
@@ -29,6 +30,7 @@
     "typescript": "5.9.3",
     "v86": "0.5.381",
     "vite": "8.3.1",
+    "vitest": "5.0.2",
     "wrangler": "4.138.0"
   },
   "dependencies": {
