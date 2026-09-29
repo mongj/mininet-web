@@ -18,5 +18,5 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/vm/emulator.worker.ts"]
+  "exclude": ["src/vm/emulator.worker.ts", "src/vm/9p"]
 }

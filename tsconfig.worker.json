@@ -7,7 +7,9 @@
   "include": [
     "src/vm/emulator.worker.ts",
     "src/vm/emulator-options.ts",
-    "src/vm/messages.ts"
+    "src/vm/messages.ts",
+    "src/vm/opfs-storage.ts",
+    "src/vm/9p"
   ],
   "exclude": []
 }
