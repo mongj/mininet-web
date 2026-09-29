@@ -55,6 +55,6 @@ COPY --from=builder /src/examples /usr/lib/python3.12/site-packages/mininet/exam
 COPY --from=builder /src/LICENSE /usr/share/licenses/mininet/LICENSE
 
 COPY init /init
-COPY lab.py /root/lab.py
+COPY lab.py /usr/share/mininet-web/skel/lab.py
 COPY trim-modules.sh /tmp/trim-modules.sh
 RUN sh /tmp/trim-modules.sh && rm /tmp/trim-modules.sh

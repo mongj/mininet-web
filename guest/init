@@ -20,20 +20,34 @@ modprobe af_packet
 modprobe iptable_nat
 modprobe iptable_filter
 modprobe xt_MASQUERADE
+modprobe 9pnet_virtio
+modprobe 9p
 ovsdb-tool create /etc/openvswitch/conf.db /usr/share/openvswitch/vswitch.ovsschema
 ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --detach
 ovs-vsctl --no-wait init
 ovs-vswitchd --pidfile --detach
+mkdir -p /root/playground
+# Serial1 bytes match the SERIAL1_* constants in src/vm/emulator.worker.ts.
+# msize must match P9_MSIZE in src/vm/9p/constants.ts; host9p is v86's default virtio 9p mount tag.
+if mount -t 9p -o trans=virtio,version=9p2000.L,cache=none,msize=8192 host9p /root/playground 2>/dev/null; then
+  printf '\002' >/dev/ttyS1
+else
+  printf '\003' >/dev/ttyS1
+fi
+if [ ! -e /root/playground/.mininet-web-seeded ]; then
+  cp -a /usr/share/mininet-web/skel/. /root/playground/
+  : >/root/playground/.mininet-web-seeded
+fi
 export TERM=xterm-256color
 export PS1='\h:\w\$ '
 export HOME=/root
-cd /root
+cd "$HOME/playground"
 clear
+echo "Linux is ready. Mininet and Open vSwitch are installed in this guest."
 cat <<'EOF'
-Linux is ready. Mininet and Open vSwitch are installed in this guest.
 
 Demo network (hosts h1 and h2, switch s1):
-  python3 /root/lab.py
+  python3 lab.py
 
 That opens the Mininet CLI. Try nodes, net, pingall, and help.
 exit returns to this shell.
@@ -42,7 +56,7 @@ Or start your own topology:
   mn --switch ovsbr --controller none --topo single,2
 EOF
 
-# Send a ready signal via uart1 side channel to the v86 emulator worker
+# Ready signal (SERIAL1_READY in src/vm/emulator.worker.ts), sent after the mount result.
 printf '\001' >/dev/ttyS1
 
 while true; do

@@ -53,7 +53,7 @@ scripts/                     Asset packaging and headless VM verification
 wrangler.jsonc               Manual Workers deployment configuration
 ```
 
-The network starts in OVS standalone learning mode; no SDN controller is bundled. Do also note that changes inside the VM are not persisted.
+The network starts in OVS standalone learning mode; no SDN controller is bundled. The shell starts in `/root/playground` (`~/playground`). Do also note that changes inside the VM are not persisted.
 
 ## Checks
 
@@ -81,7 +81,7 @@ yarn build
 
 ## Runtime footprint
 
-The download is approximately 37 MiB. The VM uses 512 MiB of configured guest RAM, plus emulator and browser overhead. All Mininet hosts share one guest kernel. Performance and packet timings are influenced by CPU emulation and browser scheduling.
+The download is approximately 39 MiB. The VM uses 512 MiB of configured guest RAM, plus emulator and browser overhead. All Mininet hosts share one guest kernel. Performance and packet timings are influenced by CPU emulation and browser scheduling.
 
 ## License
 

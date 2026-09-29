@@ -4,7 +4,8 @@ set -eu
 version=$(ls /lib/modules)
 mkdir -p /tmp/keep-modules
 for module in veth bridge openvswitch sch_netem sch_htb sch_tbf sch_fq_codel \
-    cls_u32 cls_fw ifb 8021q dummy af_packet iptable_nat iptable_filter xt_MASQUERADE; do
+    cls_u32 cls_fw ifb 8021q dummy af_packet iptable_nat iptable_filter \
+    xt_MASQUERADE 9p 9pnet_virtio; do
   modprobe -S "$version" --show-depends "$module"
 done | awk '$1 == "insmod" {print $2}' | sort -u > /tmp/modules-needed
 while IFS= read -r file; do cp --parents "$file" /tmp/keep-modules; done < /tmp/modules-needed

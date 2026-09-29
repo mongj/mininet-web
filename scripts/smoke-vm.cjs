@@ -39,6 +39,11 @@ vm.add_listener('serial0-output-byte', (b) => {
     pending = '';
   }
 });
+// Serial1 side-channel bytes; see SERIAL1_* in src/vm/emulator.worker.ts.
+const SERIAL1_PLAYGROUND_NOT_MOUNTED = 0x03;
+const serial1 = [];
+vm.add_listener('serial1-output-byte', (b) => serial1.push(b));
+const SHELL_PROMPT = /mininet-web:~\/playground# $/;
 const clean = (s) => s.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
 async function waitFor(pattern, from = 0, timeout = 180000) {
   const until = Date.now() + timeout;
@@ -60,7 +65,7 @@ async function command(s, timeout = 45000) {
   return atPrompt(s, /mininet> $/, timeout);
 }
 async function sh(s, timeout = 30000) {
-  return atPrompt(s, /mininet-web:~# $/, timeout);
+  return atPrompt(s, SHELL_PROMPT, timeout);
 }
 async function pushFile(guestPath, hostPath) {
   const encoded = fs.readFileSync(hostPath).toString('base64');
@@ -76,7 +81,19 @@ function requireMatch(name, output, pattern) {
 
 (async () => {
   try {
-    await waitFor(/mininet-web:~# $/);
+    await waitFor(SHELL_PROMPT);
+
+    const home = await sh(
+      'echo "HOME=$HOME" && echo "PWD=$(pwd)" && test -f lab.py && echo LAB_OK',
+    );
+    requireMatch('home.path', home, /^HOME=\/root\r?$/m);
+    requireMatch('home.cwd', home, /^PWD=\/root\/playground\r?$/m);
+    requireMatch('home.lab', home, /LAB_OK/);
+    assert.ok(
+      serial1.includes(SERIAL1_PLAYGROUND_NOT_MOUNTED),
+      'guest reports playground not mounted',
+    );
+    pass('storage.not-mounted');
 
     const editors = await sh(
       'command -v vim && command -v nano && echo EDITORS_OK',
@@ -225,7 +242,7 @@ function requireMatch(name, output, pattern) {
 
     const from = all.length;
     vm.serial0_send('exit\n');
-    await waitFor(/mininet-web:~# $/, from, 30000);
+    await waitFor(SHELL_PROMPT, from, 30000);
     pass('mn.cli.exit');
 
     await sh('mn -c && echo CLEAN_OK', 45000);
