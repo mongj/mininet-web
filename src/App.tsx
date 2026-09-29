@@ -84,7 +84,7 @@ export function App() {
 
   function boot() {
     terminal.current?.reset();
-    vm.start();
+    void vm.start();
     terminal.current?.focus();
   }
 

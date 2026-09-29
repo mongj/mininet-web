@@ -207,9 +207,31 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
   }
 }
 
+async function handleStop() {
+  try {
+    await stopEmulator();
+  } catch (error) {
+    console.error(error);
+  }
+  emit({ type: 'stopped' });
+}
+
 self.onmessage = ({ data }: MessageEvent<WorkerCommand>) => {
-  if (data.type === 'start') void start(data.assetBase, data.options);
-  else emulator?.serial0_send(data.text);
+  switch (data.type) {
+    case 'start':
+      void start(data.assetBase, data.options);
+      return;
+    case 'input':
+      emulator?.serial0_send(data.text);
+      return;
+    case 'stop':
+      void handleStop();
+      return;
+    default: {
+      const exhaustive: never = data;
+      return exhaustive;
+    }
+  }
 };
 
 self.addEventListener('unhandledrejection', (event) => fail(event.reason));
