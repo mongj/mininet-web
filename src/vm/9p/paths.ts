@@ -1,39 +1,16 @@
 import { EINVAL, ENAMETOOLONG, NAME_MAX } from './constants';
 import { P9Error } from './errors';
+import { isPathWithin, rebasePath } from '../../lib/paths';
 
-// Paths are relative to the playground root: '' is the root, 'a/b' a descendant.
+export {
+  baseName,
+  isPathWithin,
+  joinPath,
+  parentPath,
+  rebasePath,
+} from '../../lib/paths';
 
 const encoder = new TextEncoder();
-
-export function parentPath(path: string): string {
-  if (path === '') return '';
-  const index = path.lastIndexOf('/');
-  return index === -1 ? '' : path.slice(0, index);
-}
-
-export function baseName(path: string): string {
-  if (path === '') return '';
-  const index = path.lastIndexOf('/');
-  return index === -1 ? path : path.slice(index + 1);
-}
-
-export function joinPath(dir: string, name: string): string {
-  if (name === '.' || name === '') return dir;
-  if (name === '..') return parentPath(dir);
-  return dir === '' ? name : `${dir}/${name}`;
-}
-
-/** True when `path` is `root` itself or lies beneath it. */
-export function isPathWithin(root: string, path: string): boolean {
-  return root === '' || path === root || path.startsWith(`${root}/`);
-}
-
-/** Moves `path` from under `from` to under `to`; `path` must be within `from`. */
-export function rebasePath(path: string, from: string, to: string): string {
-  if (path === from) return to;
-  const rest = from === '' ? path : path.slice(from.length + 1);
-  return to === '' ? rest : `${to}/${rest}`;
-}
 
 export function deleteWithin<V>(map: Map<string, V>, root: string): void {
   for (const key of [...map.keys()]) {

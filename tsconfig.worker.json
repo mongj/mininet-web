@@ -5,6 +5,7 @@
     "lib": ["ES2022", "WebWorker"]
   },
   "include": [
+    "src/lib/paths.ts",
     "src/vm/emulator.worker.ts",
     "src/vm/emulator-options.ts",
     "src/vm/messages.ts",
