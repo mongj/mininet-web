@@ -1,25 +1,25 @@
 {
-  "bytes": 30933436,
+  "bytes": 32735582,
   "chunks": [
     {
       "file": "guest-0.bin",
       "bytes": 8388608,
-      "sha256": "9d9e330fdebf0b12c8dd1aa2ae8a6af207bfe2f1e08b19b7cee894f74f4ccad3"
+      "sha256": "27dddbb288627c8293644c47a654250db056501b5a936c5d76aa741e82a315c6"
     },
     {
       "file": "guest-1.bin",
       "bytes": 8388608,
-      "sha256": "eee37120cf575f890634d5aff93324592cc8d5a34658a7457617c08de4fcd6e9"
+      "sha256": "8e15bd73ecb9b6032049aa4ff592ddefd8fb154b0e9f9824fb45ce55fbb81ff5"
     },
     {
       "file": "guest-2.bin",
       "bytes": 8388608,
-      "sha256": "163fa3becff6eb80552ef2bab36c465653aa8018272d192661ab5b6a3e2e42ac"
+      "sha256": "062698dd60ad47b4e56bb9c21c12e960d8e3cc644b304876466aa121a69be359"
     },
     {
       "file": "guest-3.bin",
-      "bytes": 5767612,
-      "sha256": "a294e690ae399d11c6722c3bb011c24c3a7a9df49350baab0e37005d2a5ec1fd"
+      "bytes": 7569758,
+      "sha256": "3b4a23ead233bbc59e9d901b66b1615368ae88c7ee2580aa3afb9890d1a9ff2d"
     }
   ]
 }

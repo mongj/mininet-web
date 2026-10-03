@@ -18,7 +18,7 @@ RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 FROM --platform=$TARGET_PLATFORM alpine:3.21
 RUN apk add --no-cache \
     linux-virt=6.12.111-r0 \
-    python3=3.12.14-r0 \
+    python3~3.12 \
     py3-setuptools=70.3.0-r0 \
     bash=5.2.37-r0 \
     iproute2=6.11.0-r0 \
@@ -38,7 +38,9 @@ RUN apk add --no-cache \
     traceroute=2.1.6-r0 \
     coreutils=9.5-r2 \
     nano=8.2-r0 \
-    vim=9.1.1105-r0
+    vim=9.1.1105-r0 \
+    conntrack-tools=1.4.8-r0 \
+    curl=8.14.1-r2
 # Mininet NAT shells out to `iptables -t nat`. Alpine's nft iptables needs
 # nf_tables; the legacy binary matches Mininet and the xtables modules we keep.
 RUN ln -sf iptables-legacy /usr/sbin/iptables \
