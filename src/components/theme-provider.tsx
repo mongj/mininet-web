@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
@@ -48,6 +49,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </AppearanceContext.Provider>
   );
+}
+
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+function subscribeToSystemAppearance(notify: () => void): () => void {
+  const query = window.matchMedia(DARK_QUERY);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+}
+
+/** The appearance in effect, with `system` resolved against the OS setting. */
+export function useResolvedAppearance(): 'light' | 'dark' {
+  const { appearance } = useAppearance();
+  const systemDark = useSyncExternalStore(
+    subscribeToSystemAppearance,
+    () => window.matchMedia(DARK_QUERY).matches,
+  );
+  if (appearance === 'system') return systemDark ? 'dark' : 'light';
+  return appearance;
 }
 
 export function useAppearance() {
