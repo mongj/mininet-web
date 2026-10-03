@@ -1,7 +1,12 @@
+import type { FsErrorCode } from '../fs-protocol';
 import {
   EACCES,
   EBUSY,
+  EEXIST,
+  EINVAL,
   EIO,
+  EISDIR,
+  ENAMETOOLONG,
   ENOENT,
   ENOSPC,
   ENOTDIR,
@@ -53,4 +58,30 @@ export function mapError(error: unknown): number {
     }
   }
   return EIO;
+}
+
+/** The host-facing code for an error thrown by a host file operation. */
+export function fsErrorCode(error: unknown): FsErrorCode {
+  switch (mapError(error)) {
+    case ENOENT:
+      return 'not-found';
+    case EEXIST:
+      return 'exists';
+    case ENOTDIR:
+      return 'not-dir';
+    case EISDIR:
+      return 'is-dir';
+    case ENOTEMPTY:
+      return 'not-empty';
+    case EINVAL:
+      return 'invalid';
+    case ENAMETOOLONG:
+      return 'name-too-long';
+    case EBUSY:
+      return 'busy';
+    case ENOSPC:
+      return 'no-space';
+    default:
+      return 'io';
+  }
 }

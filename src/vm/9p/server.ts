@@ -1,3 +1,4 @@
+import type { FsChange, FsEntry, FsReadResult, HostFs } from '../fs-protocol';
 import { OPFS_APP_DIR, OPFS_PLAYGROUND_DIR } from '../opfs-storage';
 import {
   AT_REMOVEDIR,
@@ -131,8 +132,20 @@ const BLOCK_SIZE = 4096;
 const ST_BLOCK_UNIT = 512;
 const STATFS_FALLBACK_QUOTA = 64 * 1024 * 1024;
 const STATFS_FILE_COUNT = 1024 * 1024;
+const CHANGE_FLUSH_MS = 100;
 
 const encoder = new TextEncoder();
+
+/** Files and folders made from the page belong to root, like the shell's. */
+const ROOT_OWNER = { uid: 0, gid: 0 };
+
+function assertHostPath(path: string): void {
+  if (path === '') return;
+  for (const name of path.split('/')) {
+    assertName(name);
+    if (name === '.' || name === '..') throw new P9Error(EINVAL);
+  }
+}
 
 interface Fid {
   path: string;
@@ -152,10 +165,14 @@ export class Opfs9pServer {
   private msize = P9_MSIZE;
   private queue: Promise<void> = Promise.resolve();
   private closed = false;
+  private readonly changedDirs = new Set<string>();
+  private readonly changedPaths = new Set<string>();
+  private changeTimer: ReturnType<typeof setTimeout> | undefined;
 
   private constructor(
     appDir: FileSystemDirectoryHandle,
     private readonly playground: FileSystemDirectoryHandle,
+    private readonly onChange?: (change: FsChange) => void,
   ) {
     this.meta = new MetaStore(appDir, (flush) => {
       this.queue = this.queue.then(flush).catch((error: unknown) => {
@@ -164,8 +181,14 @@ export class Opfs9pServer {
     });
   }
 
-  /** Serves the playground under `root` (default: this origin's OPFS root). */
-  static async open(root?: FileSystemDirectoryHandle): Promise<Opfs9pServer> {
+  /**
+   * Serves the playground under `root` (default: this origin's OPFS root).
+   * `onChange` receives debounced batches of what changed in the playground.
+   */
+  static async open(
+    root?: FileSystemDirectoryHandle,
+    onChange?: (change: FsChange) => void,
+  ): Promise<Opfs9pServer> {
     const storageRoot = root ?? (await navigator.storage.getDirectory());
     const appDir = await storageRoot.getDirectoryHandle(OPFS_APP_DIR, {
       create: true,
@@ -173,7 +196,7 @@ export class Opfs9pServer {
     const playground = await appDir.getDirectoryHandle(OPFS_PLAYGROUND_DIR, {
       create: true,
     });
-    const server = new Opfs9pServer(appDir, playground);
+    const server = new Opfs9pServer(appDir, playground, onChange);
     await server.meta.load(playground);
     return server;
   }
@@ -201,8 +224,166 @@ export class Opfs9pServer {
   async close(): Promise<void> {
     await this.queue;
     this.closed = true;
+    if (this.changeTimer !== undefined) {
+      clearTimeout(this.changeTimer);
+      this.changeTimer = undefined;
+    }
     await this.meta.close();
     this.resetSession();
+  }
+
+  /**
+   * Host-side operations, serialized with the guest's 9P requests. What one
+   * changes is reported through `onChange` before it settles.
+   */
+  readonly host: HostFs = {
+    list: (path) =>
+      this.run(async () => {
+        assertHostPath(path);
+        const dir = await this.getDir(path);
+        const entries: FsEntry[] = [];
+        for await (const [name, handle] of listed(dir).entries()) {
+          const target = this.meta.get(joinPath(path, name))?.symlink;
+          if (handle.kind === 'directory') entries.push({ name, kind: 'dir' });
+          else if (typeof target === 'string')
+            entries.push({ name, kind: 'symlink', target });
+          else entries.push({ name, kind: 'file' });
+        }
+        return entries;
+      }),
+
+    read: (path, maxBytes) =>
+      this.run(async () => {
+        assertHostPath(path);
+        await this.requireRegularFile(path);
+        return this.handles.withFileAccess(
+          path,
+          undefined,
+          (access): FsReadResult => {
+            const size = access.getSize();
+            if (size > maxBytes) return { tooLarge: true, size };
+            const data = new Uint8Array(size);
+            let offset = 0;
+            while (offset < size) {
+              const n = access.read(data.subarray(offset), { at: offset });
+              if (n <= 0) break;
+              offset += n;
+            }
+            return { tooLarge: false, data: data.subarray(0, offset) };
+          },
+        );
+      }),
+
+    write: (path, data) =>
+      this.run(async () => {
+        assertHostPath(path);
+        if (path === '') throw new P9Error(EISDIR);
+        if (await this.tryKind(path)) await this.requireRegularFile(path);
+        else await this.createFile(path, ROOT_OWNER);
+        await this.handles.withFileAccess(path, undefined, (access) => {
+          let offset = 0;
+          while (offset < data.length) {
+            const n = access.write(data.subarray(offset), { at: offset });
+            if (n <= 0) throw new P9Error(EIO);
+            offset += n;
+          }
+          access.truncate(data.length);
+          access.flush();
+        });
+        this.qids.bump(path);
+        this.touchModified(path);
+      }),
+
+    createFile: (path) =>
+      this.run(async () => {
+        assertHostPath(path);
+        if (await this.tryKind(path)) throw new P9Error(EEXIST);
+        await this.createFile(path, ROOT_OWNER);
+      }),
+
+    createDir: (path) =>
+      this.run(async () => {
+        assertHostPath(path);
+        if (await this.tryKind(path)) throw new P9Error(EEXIST);
+        await this.makeDir(path, ROOT_OWNER);
+      }),
+
+    rename: (from, to) =>
+      this.run(async () => {
+        assertHostPath(from);
+        assertHostPath(to);
+        if (from === to) return;
+        await this.requireKind(from);
+        // Unlike rename(2), an existing destination is an error.
+        if (await this.tryKind(to)) throw new P9Error(EEXIST);
+        // Fail before renamePath drops the open handles under `from`.
+        await this.getDir(parentPath(to));
+        await this.renamePath(from, to);
+      }),
+
+    remove: (path) =>
+      this.run(async () => {
+        assertHostPath(path);
+        if (path === '') throw new P9Error(EBUSY);
+        const kind = await this.requireKind(path);
+        this.handles.closeWithin(path, this.fids.values());
+        const parent = await this.getDir(parentPath(path));
+        await parent.removeEntry(baseName(path), { recursive: kind === 'dir' });
+        this.meta.forget(path);
+        this.qids.forget(path);
+        this.noteDir(parentPath(path));
+        this.notePath(path);
+      }),
+  };
+
+  private run<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(async () => {
+      if (this.closed) throw new P9Error(EIO);
+      try {
+        return await task();
+      } finally {
+        this.flushChange();
+      }
+    });
+    this.queue = result.then(
+      () => {},
+      () => {},
+    );
+    return result;
+  }
+
+  private async requireRegularFile(path: string): Promise<void> {
+    const kind = await this.requireKind(path);
+    if (kind === 'dir') throw new P9Error(EISDIR);
+    if (kind === 'symlink') throw new P9Error(EINVAL);
+  }
+
+  private noteDir(path: string): void {
+    this.changedDirs.add(path);
+    this.scheduleChange();
+  }
+
+  private notePath(path: string): void {
+    this.changedPaths.add(path);
+    this.scheduleChange();
+  }
+
+  private scheduleChange(): void {
+    if (!this.onChange || this.closed || this.changeTimer !== undefined) return;
+    this.changeTimer = setTimeout(() => this.flushChange(), CHANGE_FLUSH_MS);
+  }
+
+  private flushChange(): void {
+    if (this.changeTimer === undefined) return;
+    clearTimeout(this.changeTimer);
+    this.changeTimer = undefined;
+    const change: FsChange = {
+      dirs: [...this.changedDirs],
+      paths: [...this.changedPaths],
+    };
+    this.changedDirs.clear();
+    this.changedPaths.clear();
+    this.onChange?.(change);
   }
 
   private resetSession(): void {
@@ -414,6 +595,7 @@ export class Opfs9pServer {
         access.truncate(asSafeNumber(size));
       });
       this.qids.bump(fid.path);
+      this.notePath(fid.path);
     }
     this.meta.set(fid.path, meta);
     return emptyReply(P9_RSETATTR, tag);
@@ -435,6 +617,7 @@ export class Opfs9pServer {
       if (flags & O_TRUNC) {
         fid.handle.access.truncate(0);
         this.qids.bump(fid.path);
+        this.notePath(fid.path);
         this.meta.set(fid.path, {
           ...this.meta.of(fid.path, 'file'),
           ...nowTimes(),
@@ -504,14 +687,8 @@ export class Opfs9pServer {
     const handle = this.fileHandleOf(fid);
     const written = handle.access.write(data, { at: offset });
     this.qids.bump(fid.path);
-    const times = nowTimes();
-    this.meta.set(fid.path, {
-      ...this.meta.of(fid.path, 'file'),
-      mtimeSec: times.mtimeSec,
-      mtimeNsec: times.mtimeNsec,
-      ctimeSec: times.ctimeSec,
-      ctimeNsec: times.ctimeNsec,
-    });
+    this.notePath(fid.path);
+    this.touchModified(fid.path);
     return new Writer().u32(written).finish(P9_RWRITE, tag);
   }
 
@@ -531,16 +708,11 @@ export class Opfs9pServer {
     assertName(name);
     const path = joinPath(fid.path, name);
     if (await this.tryKind(path)) throw new P9Error(EEXIST);
-    const parent = await this.getDir(fid.path);
-    await parent.getDirectoryHandle(name, { create: true });
-    this.meta.set(
-      path,
-      defaultMeta('dir', {
-        mode: S_IFDIR | (mode & S_IRWXUGO),
-        uid: fid.uid,
-        gid,
-      }),
-    );
+    await this.makeDir(path, {
+      mode: S_IFDIR | (mode & S_IRWXUGO),
+      uid: fid.uid,
+      gid,
+    });
     return new Writer().qid(this.qids.of(path, 'dir')).finish(P9_RMKDIR, tag);
   }
 
@@ -744,6 +916,30 @@ export class Opfs9pServer {
       typeof extra.symlink === 'string' ? 'symlink' : 'file';
     this.meta.set(path, defaultMeta(kind, extra));
     this.qids.of(path, kind);
+    this.noteDir(parentPath(path));
+    this.notePath(path);
+  }
+
+  private async makeDir(
+    path: string,
+    extra: Partial<MetaEntry>,
+  ): Promise<void> {
+    const parent = await this.getDir(parentPath(path));
+    await parent.getDirectoryHandle(baseName(path), { create: true });
+    this.meta.set(path, defaultMeta('dir', extra));
+    this.noteDir(parentPath(path));
+  }
+
+  /** Stamps a file whose content just changed. */
+  private touchModified(path: string): void {
+    const times = nowTimes();
+    this.meta.set(path, {
+      ...this.meta.of(path, 'file'),
+      mtimeSec: times.mtimeSec,
+      mtimeNsec: times.mtimeNsec,
+      ctimeSec: times.ctimeSec,
+      ctimeNsec: times.ctimeNsec,
+    });
   }
 
   private async unlink(path: string, directory: boolean): Promise<void> {
@@ -766,6 +962,8 @@ export class Opfs9pServer {
     }
     this.meta.forget(path);
     this.qids.forget(path);
+    this.noteDir(parentPath(path));
+    this.notePath(path);
   }
 
   private async renamePath(from: string, to: string): Promise<void> {
@@ -800,6 +998,10 @@ export class Opfs9pServer {
       await this.unlink(from, false);
     }
     this.remapPath(from, to);
+    this.noteDir(parentPath(from));
+    this.noteDir(parentPath(to));
+    this.notePath(from);
+    this.notePath(to);
     await this.handles.reacquire(to, this.openFileFids());
   }
 

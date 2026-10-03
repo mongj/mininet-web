@@ -48,7 +48,12 @@ export class TestClient {
 
   /** Opens a server on `root` and attaches `ROOT_FID` to the playground. */
   static async connect(root: FakeDirectory): Promise<TestClient> {
-    const client = new TestClient(await Opfs9pServer.open(asOpfsRoot(root)));
+    return TestClient.attach(await Opfs9pServer.open(asOpfsRoot(root)));
+  }
+
+  /** Negotiates a session on `server` and attaches `ROOT_FID` to the playground. */
+  static async attach(server: Opfs9pServer): Promise<TestClient> {
+    const client = new TestClient(server);
     await client.rpc(P9_TVERSION, new Writer().u32(P9_MSIZE).str(P9_VERSION));
     await client.rpc(
       P9_TATTACH,
