@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadEmulatorOptions } from '@/lib/emulator-settings';
+import { FileSystemClient } from '../vm/fs-client';
 import type { StorageReason, WorkerCommand, WorkerEvent } from '../vm/messages';
 import {
   clearPlaygroundStorage,
@@ -8,6 +9,16 @@ import {
 
 export type Phase =
   'idle' | 'downloading' | 'booting' | 'shell' | 'mininet' | 'error';
+
+/** Linux is stopped, or the last boot failed. Same condition as showing Boot. */
+export function canBoot(phase: Phase): boolean {
+  return phase === 'idle' || phase === 'error';
+}
+
+/** Linux is up and the shell is usable. */
+export function isBooted(phase: Phase): boolean {
+  return phase === 'shell' || phase === 'mininet';
+}
 
 export type StorageState =
   { persistent: true } | { persistent: false; reason: StorageReason } | null;
@@ -61,7 +72,10 @@ function requestPersistentStorage(): void {
   })();
 }
 
+const fileSystem = new FileSystemClient();
+
 async function shutdownWorker(instance: Worker) {
+  fileSystem.detach(instance);
   await new Promise<void>((resolve) => {
     const finish = () => {
       clearTimeout(timer);
@@ -153,6 +167,7 @@ export function useVirtualMachine(onSerial: (text: string) => void) {
           return;
         }
         worker.current = instance;
+        fileSystem.attach(instance);
         instance.onerror = (event) => {
           if (worker.current !== instance) return;
           fail(describeUnknownError(event.error) ?? event.message);
@@ -201,6 +216,12 @@ export function useVirtualMachine(onSerial: (text: string) => void) {
               onSerial(data.text);
               return;
             }
+            case 'fs-result':
+              fileSystem.handleResult(data);
+              return;
+            case 'fs-change':
+              fileSystem.handleChange(data);
+              return;
             case 'stopped':
               return;
             default: {
@@ -244,5 +265,9 @@ export function useVirtualMachine(onSerial: (text: string) => void) {
       return result;
     }, [enqueue, start]);
 
-  return { ...state, start, send, resetSavedFiles };
+  // A stable object between state changes, so it can be a memo dependency.
+  return useMemo(
+    () => ({ ...state, start, send, resetSavedFiles, files: fileSystem }),
+    [state, start, send, resetSavedFiles],
+  );
 }

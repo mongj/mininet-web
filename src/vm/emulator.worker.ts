@@ -3,7 +3,15 @@ import {
   sanitizeEmulatorOptions,
   type EmulatorOptions,
 } from './emulator-options';
-import type { GuestManifest, WorkerCommand, WorkerEvent } from './messages';
+import type { FsChange, FsRequest } from './fs-protocol';
+import type {
+  GuestManifest,
+  StorageReason,
+  WorkerCommand,
+  WorkerEvent,
+} from './messages';
+import { fsErrorCode } from './9p/errors';
+import { asOpfsRoot, createMemoryRoot } from './9p/memory-opfs';
 import { Opfs9pServer } from './9p/server';
 import { requestPlaygroundLock } from './opfs-storage';
 
@@ -11,7 +19,8 @@ let emulator: Emulator | undefined;
 let starting = false;
 let output = '';
 let flushTimer: ReturnType<typeof setInterval> | undefined;
-let playground: { server: Opfs9pServer; releaseLock: () => void } | undefined;
+// `releaseLock` is set when the playground is backed by OPFS, not by memory.
+let playground: { server: Opfs9pServer; releaseLock?: () => void } | undefined;
 // Set while the host serves the playground and waits for the guest's mount result.
 let awaitingGuestMount = false;
 
@@ -45,7 +54,9 @@ function onSerial1Output(byte: number) {
       if (!awaitingGuestMount) break;
       awaitingGuestMount = false;
       if (byte === SERIAL1_PLAYGROUND_MOUNTED) {
-        emit({ type: 'storage', persistent: true });
+        // A memory-backed playground was already reported when it was attached.
+        if (playground?.releaseLock)
+          emit({ type: 'storage', persistent: true });
         break;
       }
       emit({ type: 'storage', persistent: false, reason: 'mount-failed' });
@@ -81,33 +92,67 @@ async function releasePlayground() {
   try {
     await current.server.close();
   } finally {
-    current.releaseLock();
+    current.releaseLock?.();
   }
 }
 
-async function attachPlayground(): Promise<Opfs9pServer | undefined> {
+function onPlaygroundChange(change: FsChange) {
+  emit({ type: 'fs-change', ...change });
+}
+
+/** Serves the playground from OPFS when `releaseLock` is given, else from memory. */
+async function servePlayground(
+  releaseLock?: () => void,
+): Promise<Opfs9pServer> {
+  const server = await Opfs9pServer.open(
+    releaseLock ? undefined : asOpfsRoot(createMemoryRoot()),
+    onPlaygroundChange,
+  );
+  playground = { server, releaseLock };
+  awaitingGuestMount = true;
+  return server;
+}
+
+/**
+ * Serves the playground from memory, so the host still sees the session's
+ * files when they cannot be saved.
+ */
+function attachMemoryPlayground(reason: StorageReason): Promise<Opfs9pServer> {
+  emit({ type: 'storage', persistent: false, reason });
+  return servePlayground();
+}
+
+async function attachPlayground(): Promise<Opfs9pServer> {
   let releaseLock: (() => void) | null;
   try {
     releaseLock = await requestPlaygroundLock();
   } catch (error) {
     console.error(error);
-    emit({ type: 'storage', persistent: false, reason: 'unavailable' });
-    return undefined;
+    return attachMemoryPlayground('unavailable');
   }
-  if (!releaseLock) {
-    emit({ type: 'storage', persistent: false, reason: 'locked' });
-    return undefined;
-  }
+  if (!releaseLock) return attachMemoryPlayground('locked');
   try {
-    const server = await Opfs9pServer.open();
-    playground = { server, releaseLock };
-    awaitingGuestMount = true;
-    return server;
+    return await servePlayground(releaseLock);
   } catch (error) {
     console.error(error);
     releaseLock();
-    emit({ type: 'storage', persistent: false, reason: 'unavailable' });
-    return undefined;
+    return attachMemoryPlayground('unavailable');
+  }
+}
+
+async function handleFs(id: number, request: FsRequest) {
+  if (!playground) {
+    emit({ type: 'fs-result', id, ok: false, code: 'unavailable' });
+    return;
+  }
+  try {
+    const call = playground.server.host[request.method] as (
+      ...args: unknown[]
+    ) => Promise<unknown>;
+    const value = await call(...request.args);
+    emit({ type: 'fs-result', id, ok: true, value: value ?? null });
+  } catch (error) {
+    emit({ type: 'fs-result', id, ok: false, code: fsErrorCode(error) });
   }
 }
 
@@ -256,9 +301,7 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
       disable_mouse: options.disable_mouse,
       disable_keyboard: options.disable_keyboard,
       uart1: true,
-      filesystem: server
-        ? { handle9p: (req, reply) => server.handle(req, reply) }
-        : undefined,
+      filesystem: { handle9p: (req, reply) => server.handle(req, reply) },
     });
     emulator.add_listener('serial0-output-byte', onSerial0Output);
     emulator.add_listener('serial1-output-byte', onSerial1Output);
@@ -290,6 +333,9 @@ self.onmessage = ({ data }: MessageEvent<WorkerCommand>) => {
       return;
     case 'input':
       emulator?.serial0_send(data.text);
+      return;
+    case 'fs':
+      void handleFs(data.id, data.request);
       return;
     case 'stop':
       void handleStop();
