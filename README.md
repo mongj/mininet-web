@@ -2,7 +2,7 @@
 
 ![Mininet Web Playground: an instant virtual network in your browser.](public/og.png)
 
-[Mininet](https://mininet.org) is great for learning network topologies and experimenting with software defined network (SDN) prototypes. This project is a React SPA with an interactive Mininet terminal. Linux, Mininet, and Open vSwitch run locally in a [v86](https://copy.sh/v86) emulation browser worker, so you can get started immediately with no installation required.
+[Mininet](https://mininet.org) is great for learning network topologies and experimenting with software defined network (SDN) prototypes. This project is a React SPA that works like a small IDE: a file explorer, a code editor, and an interactive Mininet terminal, in panes you can rearrange. Linux, Mininet, and Open vSwitch run locally in a [v86](https://copy.sh/v86) emulation browser worker, so you can get started immediately with no installation required.
 
 I hope this can be a helpful resource and reduces the barrier for people to learn about networks and SDN!
 
@@ -42,10 +42,18 @@ The guest is split into chunks below the per-file static-asset limit. All emulat
 
 ```text
 src/
-  App.tsx                    Console, boot/reset, and command controls
-  components/Terminal.tsx    xterm.js mounting, input, resize, and disposal
+  App.tsx                    Terminal session, VM hook, and the workspace shell
+  workspace/Workspace.tsx    Dockview layout, open files, and layout persistence
+  workspace/panels.tsx       Explorer, terminal, welcome and file panels; tabs
+  explorer/Explorer.tsx      File tree (headless-tree): select, rename, drag to move
+  editor/                    Monaco loading, the editor view, and open documents
+  components/Terminal.tsx    xterm.js session, mounting, input, and resize
+  components/TopBar.tsx      Status, reboot, View menu, and storage warnings
   hooks/useVirtualMachine.ts Worker lifecycle and readiness
-  vm/emulator.worker.ts      Typed v86 startup and serial I/O
+  vm/emulator.worker.ts      Typed v86 startup, serial I/O, and file requests
+  vm/9p/                     9P2000.L server for /root/playground (OPFS or memory)
+  vm/fs-protocol.ts          Host file operations served by the worker
+  vm/fs-client.ts            Main-thread client for those operations
   vm/messages.ts             Typed worker message protocol
 public/vm/                   Kernel, initramfs chunks, emulator, BIOS, notices
 guest/                       Linux image build and Mininet topology source
@@ -54,6 +62,8 @@ wrangler.jsonc               Manual Workers deployment configuration
 ```
 
 The network starts in OVS standalone learning mode; no SDN controller is bundled. The shell starts in `/root/playground` (`~/playground`); files there are saved in the browser; the rest of the guest filesystem is not persisted.
+
+The worker serves `/root/playground` to the guest over 9P and to the page through the same server, so the Explorer and editor see what the shell sees, and the worker reports the guest's changes back to them. When OPFS is locked by another tab or unavailable, the same folder is served from memory instead: the Explorer and editor keep working, and the files last until the reload. The pane layout is saved in `localStorage`.
 
 ## Checks
 
@@ -94,6 +104,9 @@ These components are distributed with the app and stay under their own licenses:
 - [v86](https://github.com/copy/v86), 0.5.381 — BSD-2-Clause; `public/vm/v86.LICENSE`.
 - [Mininet 2.3.0](https://github.com/mininet/mininet/tree/2.3.0) — BSD; license inside the guest at `/usr/share/licenses/mininet/LICENSE`.
 - [xterm.js](https://github.com/xtermjs/xterm.js) — MIT; notices in `public/vm/`.
+- [Monaco Editor](https://github.com/microsoft/monaco-editor) — MIT.
+- [Dockview](https://github.com/dockview/dockview) — MIT.
+- [Headless Tree](https://github.com/lukasbach/headless-tree) — MIT.
 - [Alpine Linux](https://alpinelinux.org/) — component-specific licenses; [source recipes](https://gitlab.alpinelinux.org/alpine/aports/-/tree/3.21-stable).
 - [Open vSwitch](https://www.openvswitch.org/) — userspace Apache-2.0; kernel datapath GPL-2.0.
 - [SeaBIOS](https://www.seabios.org/) — LGPLv3; [source](https://git.seabios.org/seabios.git/). BIOS files originate from the official v86 repository.
