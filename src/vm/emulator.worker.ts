@@ -246,8 +246,13 @@ async function start(assetBase: string, rawOptions: EmulatorOptions) {
       throw new Error('The Linux image is incomplete.');
     emit({ type: 'progress', loaded: 0, total: manifest.bytes });
 
+    // One event per whole percent, not per network chunk.
+    let reportedPercent = 0;
     const report = () => {
       const loaded = loadedBytes.reduce((sum, value) => sum + value, 0);
+      const percent = Math.floor((loaded / manifest.bytes) * 100);
+      if (percent === reportedPercent) return;
+      reportedPercent = percent;
       emit({
         type: 'progress',
         loaded: Math.min(loaded, manifest.bytes),
