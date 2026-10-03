@@ -730,6 +730,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@headless-tree/core@npm:1.7.0":
+  version: 1.7.0
+  resolution: "@headless-tree/core@npm:1.7.0"
+  checksum: 10c0/e586dad212fc3a34f5f28d9dfa23e98fa71e5f0aec380e337f5d98fa8952d9569aeb33913c0d2cd11c261ea03e8bda40c3afa397e90f1197c8829d9fa7f1f02c
+  languageName: node
+  linkType: hard
+
+"@headless-tree/react@npm:1.7.0":
+  version: 1.7.0
+  resolution: "@headless-tree/react@npm:1.7.0"
+  peerDependencies:
+    "@headless-tree/core": "*"
+    react: "*"
+    react-dom: "*"
+  checksum: 10c0/dad541d75c23211eaaeb5462b4a7f1fc331bd9ed57ef5ff78ac80dfca0d97578913c82a4e9858170b0230f9b547fdf1682c115f4140afe2fb6d1c3222f9a4eba
+  languageName: node
+  linkType: hard
+
 "@hono/node-server@npm:^1.19.9 || ^2.0.5":
   version: 2.1.1
   resolution: "@hono/node-server@npm:2.1.1"
@@ -1528,6 +1546,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/trusted-types@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "@types/trusted-types@npm:2.0.7"
+  checksum: 10c0/4c4855f10de7c6c135e0d32ce462419d8abbbc33713b31d294596c0cc34ae1fa6112a2f9da729c8f7a20707782b0d69da3b1f8df6645b0366d08825ca1522e0c
+  languageName: node
+  linkType: hard
+
 "@types/validate-npm-package-name@npm:^4.0.2":
   version: 4.0.2
   resolution: "@types/validate-npm-package-name@npm:4.0.2"
@@ -2144,6 +2169,46 @@ __metadata:
   version: 8.0.4
   resolution: "diff@npm:8.0.4"
   checksum: 10c0/7ee5d03926db4039be7252ac3b0abaae1bd122a2ca971e5ca7270e444e36ff83dd906fad1a719740ca347e97ed5dc8f458a76a8391dbcd7aff363bdafb348a00
+  languageName: node
+  linkType: hard
+
+"dockview-core@npm:^8.4.0":
+  version: 8.4.0
+  resolution: "dockview-core@npm:8.4.0"
+  checksum: 10c0/f29be44139ef20faec9980a8c80a928a190943b6136c439e743e0f505df1cc15960b7175ff81dd539c974b4a6dbba0778d5bec2dcb861219a8f7401fa391c4aa
+  languageName: node
+  linkType: hard
+
+"dockview-react@npm:8.4.0":
+  version: 8.4.0
+  resolution: "dockview-react@npm:8.4.0"
+  dependencies:
+    dockview: "npm:^8.4.0"
+  peerDependencies:
+    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/5b3001d3af37c019758806fc672b58e53d019dd39089d7aa2e68d34d8fb23e1acdaab0f289653520714d020f4eae8120dc787d28efec0ef303e7698ff92132b6
+  languageName: node
+  linkType: hard
+
+"dockview@npm:^8.4.0":
+  version: 8.4.0
+  resolution: "dockview@npm:8.4.0"
+  dependencies:
+    dockview-core: "npm:^8.4.0"
+  checksum: 10c0/9a0844f24b43f815e8bd2c026b28dcfdd360dec96b85ecdde4b5a8c33e781cb52978163b3429aeefdce52b23f90efcf33f3254f1f71102855131b4002aba799a
+  languageName: node
+  linkType: hard
+
+"dompurify@npm:3.4.15":
+  version: 3.4.15
+  resolution: "dompurify@npm:3.4.15"
+  dependencies:
+    "@types/trusted-types": "npm:^2.0.7"
+  dependenciesMeta:
+    "@types/trusted-types":
+      optional: true
+  checksum: 10c0/406b5f0f9c9dcbc80016367d33e73585b6a6f440815228d7e9cbe8abe71058183b1f4cb4207b79b8473637de4a106fc055eb6da271ef9db353d29679b891ecbc
   languageName: node
   linkType: hard
 
@@ -3456,6 +3521,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"marked@npm:14.0.0":
+  version: 14.0.0
+  resolution: "marked@npm:14.0.0"
+  bin:
+    marked: bin/marked.js
+  checksum: 10c0/57a47cb110f7b1a10f398b0a7236f9183aad2dcd5345ee73f2732b6387e585d04cef472bc655d2f84c542296be9728e179aebe3ed7f2f8666b8a0a9dae592876
+  languageName: node
+  linkType: hard
+
 "math-intrinsics@npm:^1.1.0":
   version: 1.1.0
   resolution: "math-intrinsics@npm:1.1.0"
@@ -3575,6 +3649,8 @@ __metadata:
     "@base-ui/react": "npm:1.8.0"
     "@fontsource-variable/geist": "npm:5.3.0"
     "@fontsource-variable/geist-mono": "npm:5.3.0"
+    "@headless-tree/core": "npm:1.7.0"
+    "@headless-tree/react": "npm:1.7.0"
     "@tailwindcss/vite": "npm:4.3.3"
     "@types/node": "npm:22.20.4"
     "@types/react": "npm:19.3.0"
@@ -3584,8 +3660,10 @@ __metadata:
     "@xterm/xterm": "npm:6.0.0"
     class-variance-authority: "npm:0.7.1"
     cn: "npm:0.4.0"
+    dockview-react: "npm:8.4.0"
     husky: "npm:9.1.7"
     lucide-react: "npm:1.48.0"
+    monaco-editor: "npm:0.57.0"
     next-themes: "npm:0.4.6"
     prettier: "npm:3.9.9"
     prettier-plugin-tailwindcss: "npm:0.8.1"
@@ -3615,6 +3693,16 @@ __metadata:
   dependencies:
     minipass: "npm:^7.1.2"
   checksum: 10c0/5aad75ab0090b8266069c9aabe582c021ae53eb33c6c691054a13a45db3b4f91a7fb1bd79151e6b4e9e9a86727b522527c0a06ec7d45206b745d54cd3097bcec
+  languageName: node
+  linkType: hard
+
+"monaco-editor@npm:0.57.0":
+  version: 0.57.0
+  resolution: "monaco-editor@npm:0.57.0"
+  dependencies:
+    dompurify: "npm:3.4.15"
+    marked: "npm:14.0.0"
+  checksum: 10c0/21a088dbd49cfdd27538d1c4af37bd26832866348ee673d2b43924cdf58d3e89daaafff19e94731758fa2cc81a00402f81968062867cbc5a98e010f1a84460d2
   languageName: node
   linkType: hard
 
