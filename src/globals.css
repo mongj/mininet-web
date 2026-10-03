@@ -54,7 +54,6 @@
   --color-background: var(--background);
   --color-terminal: var(--terminal);
   --color-terminal-foreground: var(--terminal-foreground);
-  --height-terminal: var(--terminal-height);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -70,7 +69,6 @@
   --terminal-cursor: oklch(0.922 0 0);
   --terminal-selection: oklch(0.269 0 0);
   --terminal-muted-foreground: oklch(0.708 0 0);
-  --terminal-height: clamp(22rem, 54vh, 45rem);
 }
 
 :root,
@@ -108,6 +106,10 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --dock-gutter: oklch(0.955 0 0);
+  --explorer-hover: oklch(0.955 0 0);
+  --explorer-selected: oklch(0.905 0 0);
+  --explorer-focus: oklch(0.6 0.19 255);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -144,6 +146,10 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --dock-gutter: #0f0f0f;
+    --explorer-hover: oklch(0.25 0 0);
+    --explorer-selected: oklch(0.32 0 0);
+    --explorer-focus: oklch(0.68 0.16 255);
   }
 }
 
@@ -180,6 +186,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --dock-gutter: #0f0f0f;
+  --explorer-hover: oklch(0.25 0 0);
+  --explorer-selected: oklch(0.32 0 0);
+  --explorer-focus: oklch(0.68 0.16 255);
 }
 
 @layer base {
@@ -188,7 +198,10 @@
   }
   html,
   body {
-    @apply min-h-svh min-w-80 bg-background font-sans text-foreground antialiased;
+    @apply h-svh min-w-80 overflow-hidden bg-background font-sans text-foreground antialiased;
+  }
+  #root {
+    @apply h-full;
   }
 }
 
@@ -197,13 +210,6 @@
     @apply underline decoration-dashed underline-offset-2 hover:text-primary;
   }
 
-  /*
-   * The host is sized purely by the flex layout (fill the card) and never by
-   * xterm's content: `.xterm` is taken out of flow so that the rows FitAddon
-   * produced for a bigger box (fullscreen, a taller window, a font swap) can
-   * never hold the card open after that box shrinks again. `--terminal-height`
-   * is only a floor for small viewports.
-   */
   .terminal-surface {
     color-scheme: dark;
     background-color: var(--terminal);
@@ -218,25 +224,18 @@
     --accent-foreground: var(--terminal-foreground);
   }
 
+  /* The xterm host fills its panel; `.xterm` is taken out of flow below. */
   .terminal-host {
-    @apply relative min-h-terminal flex-1;
+    @apply absolute inset-0;
     background-color: var(--terminal);
   }
 
   .terminal-host > .xterm {
-    @apply p-4;
+    @apply p-3;
   }
 
-  [data-console]:fullscreen,
-  [data-console]:-webkit-full-screen {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-  }
-
-  [data-console]:fullscreen .terminal-host,
-  [data-console]:-webkit-full-screen .terminal-host {
-    min-height: 0;
+  .welcome-code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground;
   }
 }
 
@@ -256,4 +255,263 @@
 .terminal-host .xterm .xterm-viewport::-webkit-scrollbar,
 .terminal-host .xterm .xterm-viewport::-webkit-scrollbar-track {
   background: var(--terminal);
+}
+
+/*
+ * Dock. Unlayered so it beats dockview's own (unlayered) theme rules, which
+ * this builds on: `dockview-theme-light` for the variable set and
+ * `dockview-spaced` for the gapped, rounded panes. Colors come from the app
+ * tokens, so one theme serves both appearances.
+ */
+.dockview-theme-light.mininet-dock {
+  color-scheme: inherit;
+  --dv-spacing-padding: 6px;
+  --dv-border-radius: 10px;
+  --dv-tab-border-radius: 6px;
+  --dv-tabs-and-actions-container-height: 36px;
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tab-font-size: 12px;
+  --dv-tab-margin-block: 5px;
+  --dv-tab-margin-inline: 2px;
+  --dv-group-view-background-color: var(--dock-gutter);
+  --dv-tabs-and-actions-container-background-color: var(--background);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--accent);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-visiblepanel-tab-background-color: color-mix(
+    in oklch,
+    var(--accent) 60%,
+    transparent
+  );
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-activegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-activegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--muted-foreground);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-tab-divider-color: transparent;
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--border);
+  --dv-active-sash-color: var(--explorer-focus);
+  --dv-drag-over-background-color: color-mix(
+    in oklch,
+    var(--explorer-focus) 14%,
+    transparent
+  );
+  --dv-drag-over-border: 1px solid var(--explorer-focus);
+  --dv-icon-hover-background-color: var(--accent);
+  --dv-scrollbar-background-color: color-mix(
+    in oklch,
+    var(--foreground) 25%,
+    transparent
+  );
+  --dv-floating-border: 1px solid var(--border);
+  --dv-floating-group-border: 1px solid var(--border);
+  --dv-context-menu-background-color: var(--popover);
+  --dv-context-menu-color: var(--popover-foreground);
+  padding-top: 0;
+  font-family: var(--font-sans);
+}
+
+.mininet-dock .dv-groupview .dv-content-container {
+  overflow: hidden;
+}
+
+/* Tab dividers stay transparent, so the menu needs its own border and rule. */
+.mininet-dock .dv-context-menu {
+  border-color: var(--border);
+}
+
+.mininet-dock .dv-context-menu-separator {
+  background-color: var(--border);
+}
+
+.mininet-dock .dv-tab {
+  padding: 0 4px 0 8px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mininet-dock .dv-tab {
+    transition: none;
+  }
+}
+
+/* A tab that cannot be closed has no button to make room for. */
+.mininet-dock .dv-tab:not(:has(.dock-tab-close)) {
+  padding-right: 8px;
+}
+
+/* Alone in a pane that is not focused, a tab blends into the tab strip. */
+.mininet-dock
+  .dv-groupview.dv-inactive-group
+  > .dv-tabs-and-actions-container
+  .dv-tabs-container:not(:has(> .dv-tab ~ .dv-tab))
+  > .dv-tab {
+  background-color: transparent;
+}
+
+/* Inactive tabs take a partial selected fill. The selected tab only deepens. */
+.mininet-dock
+  .dv-groupview
+  > .dv-tabs-and-actions-container
+  .dv-tabs-container
+  > .dv-tab.dv-inactive-tab:hover {
+  background-color: color-mix(
+    in oklch,
+    var(--dv-activegroup-visiblepanel-tab-background-color) 60%,
+    var(--dv-tabs-and-actions-container-background-color)
+  );
+  color: color-mix(
+    in oklch,
+    var(--dv-activegroup-visiblepanel-tab-color) 75%,
+    var(--dv-activegroup-hiddenpanel-tab-color)
+  );
+}
+
+.mininet-dock
+  .dv-groupview.dv-active-group
+  > .dv-tabs-and-actions-container
+  .dv-tabs-container
+  > .dv-tab.dv-active-tab:hover {
+  background-color: color-mix(
+    in oklch,
+    var(--dv-activegroup-visiblepanel-tab-background-color),
+    var(--dv-activegroup-visiblepanel-tab-color) 5%
+  );
+}
+
+.mininet-dock
+  .dv-groupview.dv-inactive-group
+  > .dv-tabs-and-actions-container
+  .dv-tabs-container
+  > .dv-tab.dv-active-tab:hover {
+  background-color: var(--dv-activegroup-visiblepanel-tab-background-color);
+  color: var(--dv-activegroup-visiblepanel-tab-color);
+}
+
+.dock-tab {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.dock-tab-close {
+  display: flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.dock-tab-close:hover {
+  background-color: color-mix(in oklch, var(--foreground) 12%, transparent);
+}
+
+.dock-tab-close > svg {
+  opacity: 0;
+}
+
+.dv-tab:hover .dock-tab-close > svg,
+.dv-tab.dv-active-tab .dock-tab-close > svg,
+.dock-tab-close:focus-visible > svg {
+  opacity: 0.7;
+}
+
+/* Unsaved: a dot, which turns into the close icon under the pointer. */
+.dock-tab-dot {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background-color: currentColor;
+}
+
+.dock-tab-close[data-dirty]:not(:hover) > .dock-tab-dot {
+  display: block;
+}
+
+.dock-tab-close[data-dirty]:not(:hover) > svg {
+  display: none;
+}
+
+/*
+ * Explorer rows, after VS Code: square, edge to edge, 22px tall, with the
+ * hover and selection fills spanning the full row and a focus outline in a
+ * different color from the selection.
+ */
+.explorer-tree {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  outline: none;
+}
+
+.explorer-row {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 22px;
+  align-items: center;
+  gap: 4px;
+  padding-right: 8px;
+  font-size: 13px;
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+.explorer-row:hover {
+  background-color: var(--explorer-hover);
+}
+
+.explorer-row[data-selected] {
+  background-color: var(--explorer-selected);
+}
+
+.explorer-row[data-drop-target] {
+  background-color: color-mix(in oklch, var(--explorer-focus) 22%, transparent);
+}
+
+.explorer-row:focus {
+  outline: 1px solid var(--explorer-focus);
+  outline-offset: -1px;
+}
+
+.explorer-twistie {
+  display: flex;
+  width: 16px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+.explorer-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.explorer-input {
+  min-width: 0;
+  flex: 1;
+  height: 20px;
+  padding: 0 3px;
+  border: 1px solid var(--explorer-focus);
+  background-color: var(--background);
+  font: inherit;
+  line-height: 18px;
+  outline: none;
+  cursor: text;
 }

@@ -4,6 +4,7 @@ import { App } from './App';
 import { ThemeProvider } from './components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import '@xterm/xterm/css/xterm.css';
+import 'dockview-react/dist/styles/dockview.css';
 import './globals.css';
 
 createRoot(document.getElementById('root')!).render(

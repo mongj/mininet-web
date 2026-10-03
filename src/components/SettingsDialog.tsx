@@ -82,8 +82,10 @@ function clearErrorMessage(result: Exclude<ClearPlaygroundResult, 'cleared'>) {
 }
 
 export function SettingsDialog({
+  onResetLayout,
   onClearSavedFiles,
 }: {
+  onResetLayout: () => void;
   onClearSavedFiles?: () => Promise<ClearPlaygroundResult>;
 }) {
   const [open, setOpen] = useState(false);
@@ -142,9 +144,8 @@ export function SettingsDialog({
           render={
             <Button
               aria-label="Settings"
-              className="self-start"
               onClick={() => setOpen(true)}
-              size="icon"
+              size="icon-sm"
               type="button"
               variant="ghost"
             />
@@ -231,6 +232,25 @@ export function SettingsDialog({
               </p>
             </div>
           </div>
+        </section>
+
+        <Separator />
+        <section className="grid gap-2">
+          <h3 className="text-sm font-medium">Layout</h3>
+          <p className="text-xs text-muted-foreground">
+            Put the panes back in their original arrangement. Open files stay
+            open.
+          </p>
+          <Button
+            onClick={() => {
+              onResetLayout();
+              setOpen(false);
+            }}
+            type="button"
+            variant="outline"
+          >
+            Reset layout
+          </Button>
         </section>
 
         {onClearSavedFiles ? (

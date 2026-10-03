@@ -1,17 +1,6 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as Xterm } from '@xterm/xterm';
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-
-export interface TerminalHandle {
-  write: (text: string) => void;
-  clear: () => void;
-  reset: () => void;
-  focus: () => void;
-}
-
-interface TerminalProps {
-  onInput: (text: string) => void;
-}
+import { useEffect, useRef } from 'react';
 
 function readToken(name: string): string {
   return getComputedStyle(document.documentElement)
@@ -28,75 +17,84 @@ function readTerminalTheme() {
   };
 }
 
-export const Terminal = forwardRef<TerminalHandle, TerminalProps>(
-  function Terminal({ onInput }, ref) {
-    const container = useRef<HTMLDivElement>(null);
-    const terminal = useRef<Xterm | null>(null);
+/**
+ * The xterm instance, kept apart from any view so serial output and
+ * scrollback survive its panel being hidden, moved or closed.
+ */
+export class TerminalSession {
+  private readonly xterm: Xterm;
+  private readonly fitAddon = new FitAddon();
+  private readonly host = document.createElement('div');
+  private opened = false;
+  private onInput: (text: string) => void = () => {};
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        write: (text) => terminal.current?.write(text),
-        clear: () => {
-          const instance = terminal.current;
-          if (!instance) return;
-          instance.reset();
-          instance.write('\x1b[3J\x1b[H\x1b[2J');
-        },
-        reset: () => terminal.current?.reset(),
-        focus: () => terminal.current?.focus(),
-      }),
-      [],
-    );
+  constructor() {
+    this.xterm = new Xterm({
+      fontFamily:
+        readToken('--font-mono') ||
+        'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      fontSize: 13,
+      lineHeight: 1.25,
+      cursorBlink: true,
+      screenReaderMode: true,
+      scrollback: 6000,
+      theme: readTerminalTheme(),
+    });
+    this.xterm.loadAddon(this.fitAddon);
+    this.xterm.onData((text) => this.onInput(text));
+    this.host.className = 'terminal-host';
+    this.host.setAttribute('aria-label', 'Interactive terminal');
+  }
 
-    useEffect(() => {
-      if (!container.current) return;
-      const instance = new Xterm({
-        fontFamily:
-          readToken('--font-mono') ||
-          'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-        fontSize: 14,
-        lineHeight: 1.25,
-        cursorBlink: true,
-        screenReaderMode: true,
-        scrollback: 6000,
-        theme: readTerminalTheme(),
-      });
-      const fit = new FitAddon();
-      instance.loadAddon(fit);
-      instance.open(container.current);
-      terminal.current = instance;
-      // A resize makes xterm re-measure the glyph cell, so the rows the first
-      // fit chose can overflow the host when the cell grew (for example after
-      // the web font swapped in). Fitting again settles on the new cell size.
-      const settle = () => {
-        fit.fit();
-        fit.fit();
-      };
-      const refit = () => {
-        requestAnimationFrame(settle);
-      };
-      settle();
-      const input = instance.onData(onInput);
-      const observer = new ResizeObserver(settle);
-      observer.observe(container.current);
-      document.addEventListener('fullscreenchange', refit);
+  setInputHandler(onInput: (text: string) => void): void {
+    this.onInput = onInput;
+  }
 
-      return () => {
-        document.removeEventListener('fullscreenchange', refit);
-        observer.disconnect();
-        input.dispose();
-        instance.dispose();
-        terminal.current = null;
-      };
-    }, [onInput]);
+  write(text: string): void {
+    this.xterm.write(text);
+  }
 
-    return (
-      <div
-        ref={container}
-        aria-label="Interactive terminal"
-        className="terminal-host w-full bg-terminal"
-      />
-    );
-  },
-);
+  reset(): void {
+    this.xterm.reset();
+  }
+
+  focus(): void {
+    this.xterm.focus();
+  }
+
+  /** Shows the terminal inside `container`; returns the detach function. */
+  mount(container: HTMLElement): () => void {
+    container.appendChild(this.host);
+    if (!this.opened) {
+      this.xterm.open(this.host);
+      this.opened = true;
+    }
+    this.fit();
+    const observer = new ResizeObserver(() => this.fit());
+    observer.observe(container);
+    return () => {
+      observer.disconnect();
+      if (this.host.parentElement === container) this.host.remove();
+    };
+  }
+
+  // A resize makes xterm re-measure the glyph cell, so the rows the first fit
+  // chose can overflow the host when the cell grew (for example after the web
+  // font swapped in). Fitting again settles on the new cell size.
+  private fit(): void {
+    if (!this.opened || !this.host.isConnected) return;
+    this.fitAddon.fit();
+    this.fitAddon.fit();
+  }
+}
+
+export function TerminalView({ session }: { session: TerminalSession }) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!container.current) return;
+    return session.mount(container.current);
+  }, [session]);
+
+  return <div ref={container} className="absolute inset-0 bg-terminal" />;
+}
