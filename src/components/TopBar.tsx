@@ -6,6 +6,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import githubDark from '@/assets/logos/github-dark.svg';
+import githubLight from '@/assets/logos/github-light.svg';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -142,6 +144,16 @@ export function TopBar() {
         <h1 className="truncate text-sm font-medium tracking-tight">
           Mininet Web Playground
         </h1>
+        <a
+          aria-label="View source on GitHub"
+          href="https://github.com/mongj/mininet-web"
+          target="_blank"
+          rel="noreferrer"
+          className="ml-1 shrink-0 opacity-70 transition-opacity hover:opacity-100"
+        >
+          <img alt="" src={githubLight} className="size-4 dark:hidden" />
+          <img alt="" src={githubDark} className="hidden size-4 dark:block" />
+        </a>
         <div className="flex-1" />
         {hasOpenFiles ? <IntelliSenseToggle /> : null}
         <Button onClick={showWelcome} size="sm" type="button" variant="ghost">
