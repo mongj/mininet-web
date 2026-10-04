@@ -32,6 +32,12 @@ for (const file of [
     `${file} is missing or empty`,
   );
 }
+for (const file of ['pyright.worker.js']) {
+  assert.ok(
+    fs.statSync(path.join(root, 'pyright', file)).size > 0,
+    `pyright/${file} is missing or empty`,
+  );
+}
 // Workers Static Assets currently limits individual files to 25 MiB.
 // Keep the guest chunked so no file exceeds that limit.
 for (const entry of fs.readdirSync(root, {

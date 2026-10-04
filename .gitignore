@@ -15,5 +15,7 @@ verification/
 public/vm/libv86.mjs
 public/vm/v86.wasm
 public/vm/v86.LICENSE
+public/pyright/pyright.worker.js
+public/pyright/basedpyright.LICENSE
 public/vm/xterm.LICENSE
 public/vm/addon-fit.LICENSE
