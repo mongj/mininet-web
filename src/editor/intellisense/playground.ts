@@ -12,9 +12,16 @@ const MAX_DEPTH = 8;
 /** Larger files are left out; the editor has its own, higher limit. */
 export const MAX_SOURCE_BYTES = 256 * 1024;
 const SKIPPED_DIRECTORIES = new Set(['__pycache__', 'node_modules']);
+/** The server's file system rejects these in a path, and then fails to start. */
+const UNSUPPORTED_CHARACTERS = /[:*?<>|"]/;
 
 export function isPythonFile(path: string): boolean {
   return path.endsWith('.py') || path.endsWith('.pyi');
+}
+
+/** Whether the server can hold a file at this playground path. */
+export function isServerPath(path: string): boolean {
+  return !UNSUPPORTED_CHARACTERS.test(path);
 }
 
 export function serverPath(path: string): string {
@@ -55,6 +62,7 @@ export async function listPythonFiles(
       const entries = await fs.list(dir);
       entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
       for (const entry of entries) {
+        if (!isServerPath(entry.name)) continue;
         const path = joinPath(dir, entry.name);
         if (entry.kind === 'file' && isPythonFile(entry.name)) {
           found.push(path);

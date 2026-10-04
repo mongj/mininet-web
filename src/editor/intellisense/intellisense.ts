@@ -22,6 +22,7 @@ import {
   LIBRARY_ROOT,
   ROOT_URI,
   fromUri,
+  isServerPath,
   listPythonFiles,
   readSource,
   serverPath,
@@ -197,7 +198,9 @@ class Session {
   private pythonModels(): Map<string, editor.ITextModel> {
     const models = new Map<string, editor.ITextModel>();
     for (const { path, model } of this.documents.models()) {
-      if (model.getLanguageId() === LANGUAGE) models.set(path, model);
+      if (model.getLanguageId() === LANGUAGE && isServerPath(path)) {
+        models.set(path, model);
+      }
     }
     return models;
   }

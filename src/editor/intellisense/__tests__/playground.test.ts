@@ -72,6 +72,14 @@ describe('listPythonFiles', () => {
     expect(fs.listed).toEqual(['']);
   });
 
+  it('skips names the server cannot hold', async () => {
+    const fs = fakeFs({
+      '': [dir('run 12:30'), file('a:b.py'), file('what?.py'), file('lab.py')],
+    });
+    expect(await listPythonFiles(fs)).toEqual(['lab.py']);
+    expect(fs.listed).toEqual(['']);
+  });
+
   it('stops at 200 files', async () => {
     const fs = fakeFs({
       '': Array.from({ length: 250 }, (_, i) => file(`f${i}.py`)),
