@@ -32,7 +32,7 @@ for (const file of [
     `${file} is missing or empty`,
   );
 }
-for (const file of ['pyright.worker.js']) {
+for (const file of ['pyright.worker.js', 'mininet.json']) {
   assert.ok(
     fs.statSync(path.join(root, 'pyright', file)).size > 0,
     `pyright/${file} is missing or empty`,

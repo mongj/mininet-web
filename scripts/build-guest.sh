@@ -28,6 +28,11 @@ echo 'Collecting kernel configuration...'
 docker run --rm --platform "$platform" --network none "$image" \
   sh -c 'cat /boot/config-*' > guest/kernel.config
   
+echo 'Collecting Mininet source for the editor...'
+mkdir -p public/pyright
+docker run --rm -i --platform "$platform" --network none --entrypoint python3 \
+  "$image" - < guest/export-mininet-source.py > public/pyright/mininet.json
+
 echo 'Building guest rootfs...'
 docker run --rm --platform "$platform" --network none --entrypoint /bin/sh \
   "$image" -c '
