@@ -34,8 +34,7 @@ export function CodeEditor({ model, onSave }: CodeEditorProps) {
         model,
         theme: theme.current,
         automaticLayout: true,
-        fontFamily:
-          "'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+        fontFamily: 'Menlo, Consolas, monospace',
         fontSize: 13,
         lineHeight: 20,
         minimap: { enabled: false },
