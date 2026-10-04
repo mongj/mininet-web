@@ -39,7 +39,7 @@ if [ ! -e /root/playground/.mininet-web-seeded ]; then
   : >/root/playground/.mininet-web-seeded
 fi
 export TERM=xterm-256color
-export PS1='\h:\w\$ '
+export PS1='\n\h:\w\$ '
 export HOME=/root
 cd "$HOME/playground"
 clear
