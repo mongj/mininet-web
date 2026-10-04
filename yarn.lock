@@ -3927,12 +3927,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lucide-react@npm:1.48.0":
-  version: 1.48.0
-  resolution: "lucide-react@npm:1.48.0"
+"lucide-react@npm:1.49.0":
+  version: 1.49.0
+  resolution: "lucide-react@npm:1.49.0"
   peerDependencies:
+    "@types/react": "*"
     react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 10c0/62c6703cdd6ff0a85f02414242f480d93a2ebf55ef10e42fc46eb9ef0dcb3c13925a199847e31245dd90d837a791b8670f16a817d0fe0d04c725aeae64d70574
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/9b1836d423be7a0272671b7db61758bc2aeb532faaa08af28a4b5a746a45e0f638a7815eb02871d04a887acde856c2bfe6317df6ae6b37578a8b3f7fc06940f7
   languageName: node
   linkType: hard
 
@@ -4133,7 +4137,7 @@ __metadata:
     cn: "npm:0.4.0"
     dockview-react: "npm:8.4.0"
     husky: "npm:9.1.7"
-    lucide-react: "npm:1.48.0"
+    lucide-react: "npm:1.49.0"
     monaco-editor: "npm:0.57.0"
     next-themes: "npm:0.4.6"
     prettier: "npm:3.9.9"
