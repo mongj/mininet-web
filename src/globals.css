@@ -515,3 +515,13 @@
   outline: none;
   cursor: text;
 }
+
+/* Monaco's suggestions and hovers, kept above the dock and its floating panes. */
+.editor-overflow-widgets {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  width: 0;
+  height: 0;
+}

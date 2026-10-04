@@ -8,6 +8,19 @@ interface CodeEditorProps {
   onSave: () => void;
 }
 
+let overflowWidgets: HTMLElement | undefined;
+
+/** One element on the page for every editor's suggestions and hovers. */
+function overflowWidgetsNode(): HTMLElement {
+  if (!overflowWidgets) {
+    overflowWidgets = document.createElement('div');
+    // Monaco's widget styles are scoped to this class.
+    overflowWidgets.className = 'monaco-editor editor-overflow-widgets';
+    document.body.appendChild(overflowWidgets);
+  }
+  return overflowWidgets;
+}
+
 /** A Monaco view of `model`. The model, not this view, owns the content. */
 export function CodeEditor({ model, onSave }: CodeEditorProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -42,7 +55,10 @@ export function CodeEditor({ model, onSave }: CodeEditorProps) {
         renderLineHighlight: 'line',
         padding: { top: 8, bottom: 8 },
         tabSize: 4,
+        // Suggestions and hovers may extend past the pane. They are placed
+        // in the viewport, so they need a parent that nothing has transformed.
         fixedOverflowWidgets: true,
+        overflowWidgetsDomNode: overflowWidgetsNode(),
         stickyScroll: { enabled: false },
       });
       created.onKeyDown((event) => {
@@ -63,5 +79,7 @@ export function CodeEditor({ model, onSave }: CodeEditorProps) {
     };
   }, [model]);
 
-  return <div ref={container} className="absolute inset-0" />;
+  // Monaco hangs the context menu on this element, outside its own
+  // `.monaco-editor`; `monaco-component` gives it the theme's colours.
+  return <div ref={container} className="monaco-component absolute inset-0" />;
 }
