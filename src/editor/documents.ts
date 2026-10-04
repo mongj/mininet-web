@@ -255,14 +255,23 @@ export class DocumentStore {
     const editor = loadMonaco();
     editor.catch(() => {});
 
+    // The file can be moved while it is being read: the worker reports a move
+    // before it answers the request that made it. What was read then belongs
+    // to the old path, so read again from the new one.
+    const path = doc.path;
+    const moved = () => {
+      if (doc.path === path) return false;
+      doc.loadAgain = true;
+      return true;
+    };
     let result: FsReadResult;
     try {
-      result = await this.fs.read(doc.path, MAX_EDITABLE_BYTES);
+      result = await this.fs.read(path, MAX_EDITABLE_BYTES);
     } catch (error) {
-      if (this.isOpen(doc)) this.loadFailed(doc, error);
+      if (this.isOpen(doc) && !moved()) this.loadFailed(doc, error);
       return;
     }
-    if (!this.isOpen(doc)) return;
+    if (!this.isOpen(doc) || moved()) return;
     if (result.tooLarge) return this.notText(doc, 'too-large');
     const text = decodeText(result.data);
     if (text === null) return this.notText(doc, 'binary');
