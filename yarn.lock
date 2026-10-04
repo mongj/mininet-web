@@ -4144,7 +4144,7 @@ __metadata:
     tailwindcss: "npm:4.3.3"
     tw-animate-css: "npm:1.4.0"
     typescript: "npm:5.9.3"
-    v86: "npm:0.5.381"
+    v86: "npm:0.5.465"
     vite: "npm:8.3.1"
     vitest: "npm:5.0.2"
     wrangler: "npm:4.138.0"
@@ -5729,10 +5729,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"v86@npm:0.5.381":
-  version: 0.5.381
-  resolution: "v86@npm:0.5.381"
-  checksum: 10c0/97fee44b2d12f69160ead7fca8fc493fb48980003a407a842a120ad9aebfb97b0d6e35d0f82312b2e71e37acf8173965b79217d5f7d900cd6f8840b0257393d3
+"v86@npm:0.5.465":
+  version: 0.5.465
+  resolution: "v86@npm:0.5.465"
+  checksum: 10c0/76265fe7627aefe08b8c431af53ecf3360877207365f633a97a5d3709c8935e75446b9954b9baded3bc69f638288e34f6330b3c54c491e58baa642e613ddead2
   languageName: node
   linkType: hard
 
