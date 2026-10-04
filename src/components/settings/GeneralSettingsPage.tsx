@@ -1,11 +1,14 @@
 import { cn } from 'cn';
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   useAppearance,
   type ThemePreference,
 } from '@/components/theme-provider';
+import { saveEditorSettings, useEditorSettings } from '@/lib/editor-settings';
 
 const APPEARANCE_OPTIONS: ReadonlyArray<{
   id: ThemePreference;
@@ -25,6 +28,7 @@ export function GeneralSettingsPage({
   onClose: () => void;
 }) {
   const { appearance, setAppearance } = useAppearance();
+  const editor = useEditorSettings();
 
   return (
     <>
@@ -56,6 +60,30 @@ export function GeneralSettingsPage({
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <Separator />
+      <section className="grid gap-2">
+        <h3 className="text-sm font-medium">Editor</h3>
+        <div className="flex items-start gap-4">
+          <div className="grid min-w-0 flex-1 gap-1">
+            <Label htmlFor="intellisense" className="font-normal">
+              IntelliSense
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Code completions, hover documentation and error checking for
+              Python files, including the Mininet API. Downloads about 3 MB the
+              first time and uses about 500 MB of memory while it is on.
+            </p>
+          </div>
+          <Switch
+            id="intellisense"
+            checked={editor.intellisense}
+            onCheckedChange={(checked) =>
+              saveEditorSettings({ intellisense: checked })
+            }
+          />
         </div>
       </section>
 

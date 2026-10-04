@@ -20,6 +20,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       'monaco-editor/features/register.all',
+      'monaco-editor/editor/contrib/semanticTokens/browser/documentSemanticTokens',
       'monaco-editor/languages/definitions/python/register',
       'monaco-editor/languages/definitions/shell/register',
       'monaco-editor/languages/definitions/markdown/register',

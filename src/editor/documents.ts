@@ -82,6 +82,30 @@ export class DocumentStore {
     return this.documents.get(path)?.snapshot ?? CLOSED;
   }
 
+  /** Whether any file is open in an editor, loaded or not. */
+  hasOpenFiles(): boolean {
+    return this.documents.size > 0;
+  }
+
+  /** The files whose text is loaded, with the model that holds it. */
+  models(): Array<{ path: string; model: editor.ITextModel }> {
+    const models: Array<{ path: string; model: editor.ITextModel }> = [];
+    for (const doc of this.documents.values()) {
+      if (doc.snapshot.model) {
+        models.push({ path: doc.path, model: doc.snapshot.model });
+      }
+    }
+    return models;
+  }
+
+  /** The file `model` holds, or null when it is not one of this store's. */
+  pathOf(model: editor.ITextModel): string | null {
+    for (const doc of this.documents.values()) {
+      if (doc.snapshot.model === model) return doc.path;
+    }
+    return null;
+  }
+
   hasUnsavedChanges(): boolean {
     return [...this.documents.values()].some((doc) => doc.snapshot.dirty);
   }

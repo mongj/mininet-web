@@ -60,6 +60,8 @@ export function CodeEditor({ model, onSave }: CodeEditorProps) {
         fixedOverflowWidgets: true,
         overflowWidgetsDomNode: overflowWidgetsNode(),
         stickyScroll: { enabled: false },
+        // Colours from the language server, when IntelliSense is on.
+        'semanticHighlighting.enabled': true,
       });
       created.onKeyDown((event) => {
         if (

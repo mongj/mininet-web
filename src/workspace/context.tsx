@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { TerminalSession } from '@/components/Terminal';
 import type { DocumentStore } from '@/editor/documents';
+import type { IntelliSenseSnapshot } from '@/editor/intellisense/intellisense';
 import type { useVirtualMachine } from '@/hooks/useVirtualMachine';
 
 export interface WorkspaceValue {
@@ -9,6 +10,10 @@ export interface WorkspaceValue {
   filesReady: boolean;
   terminal: TerminalSession;
   documents: DocumentStore;
+  /** A file is open in an editor. */
+  hasOpenFiles: boolean;
+  /** The Python language server, which runs while the setting is on. */
+  intellisense: IntelliSenseSnapshot;
   boot: () => void;
   openFile: (path: string) => void;
   /** Moves a file or folder, carrying its open editors along. */

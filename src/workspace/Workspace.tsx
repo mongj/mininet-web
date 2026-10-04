@@ -13,6 +13,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import type { TerminalSession } from '@/components/Terminal';
@@ -27,11 +28,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DocumentStore } from '@/editor/documents';
+import { IntelliSense } from '@/editor/intellisense/intellisense';
 import {
   canBoot,
   isBooted,
   type useVirtualMachine,
 } from '@/hooks/useVirtualMachine';
+import { useEditorSettings } from '@/lib/editor-settings';
 import { baseName, isPathWithin, rebasePath } from '@/lib/paths';
 import { WorkspaceContext, type WorkspaceValue } from './context';
 import {
@@ -196,6 +199,21 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
   const panelPaths = useRef(new Map<string, string>());
   const lastEditorGroup = useRef<string | null>(null);
   const documents = useMemo(() => new DocumentStore(vm.files), [vm.files]);
+  const languageServer = useMemo(
+    () => new IntelliSense(vm.files, documents),
+    [vm.files, documents],
+  );
+  const intellisense = useSyncExternalStore(
+    languageServer.subscribe,
+    languageServer.getSnapshot,
+  );
+  const hasOpenFiles = useSyncExternalStore(documents.subscribe, () =>
+    documents.hasOpenFiles(),
+  );
+  const hasPythonFile = useSyncExternalStore(documents.subscribe, () =>
+    documents.models().some(({ model }) => model.getLanguageId() === 'python'),
+  );
+  const { intellisense: intellisenseEnabled } = useEditorSettings();
   const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
   const appearance = useResolvedAppearance();
 
@@ -212,6 +230,19 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
     () => vm.files.onChange((change) => documents.handleChange(change)),
     [documents, vm.files],
   );
+
+  useEffect(() => {
+    languageServer.setFilesReady(filesReady);
+  }, [languageServer, filesReady]);
+
+  // The server is only fetched and started once there is Python to work on,
+  // and then stays up until the setting is turned off.
+  useEffect(() => {
+    if (!intellisenseEnabled) languageServer.stop();
+    else if (hasPythonFile) languageServer.start();
+  }, [languageServer, intellisenseEnabled, hasPythonFile]);
+
+  useEffect(() => () => languageServer.stop(), [languageServer]);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -437,6 +468,8 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
       filesReady,
       terminal,
       documents,
+      hasOpenFiles,
+      intellisense,
       boot: bootAndReveal,
       openFile,
       movePath,
@@ -450,6 +483,8 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
       filesReady,
       terminal,
       documents,
+      hasOpenFiles,
+      intellisense,
       bootAndReveal,
       openFile,
       movePath,

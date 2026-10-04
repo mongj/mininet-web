@@ -1,3 +1,4 @@
+import { cn } from 'cn';
 import {
   CircleHelpIcon,
   RotateCwIcon,
@@ -12,7 +13,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { IntelliSenseStatus } from '@/editor/intellisense/intellisense';
 import { isBooted } from '@/hooks/useVirtualMachine';
+import { saveEditorSettings, useEditorSettings } from '@/lib/editor-settings';
 import type { StorageReason } from '@/vm/messages';
 import { useWorkspace } from '@/workspace/context';
 
@@ -69,8 +72,68 @@ function StorageBanner({ reason }: { reason: StorageReason }) {
   );
 }
 
+function intelliSenseHint(status: IntelliSenseStatus, enabled: boolean) {
+  if (!enabled) return 'Turn on Python completions, hovers and error checking';
+  switch (status) {
+    case 'off':
+      return 'IntelliSense starts when a Python file is open';
+    case 'starting':
+      return 'IntelliSense is starting…';
+    case 'ready':
+      return 'IntelliSense is on for Python files';
+    case 'error':
+      return 'IntelliSense could not start. Turn it off and on to retry.';
+    default: {
+      const exhaustive: never = status;
+      return exhaustive;
+    }
+  }
+}
+
+/** Shown while a file is open: turns the Python language server on and off. */
+function IntelliSenseToggle() {
+  const { intellisense } = useWorkspace();
+  const { intellisense: enabled } = useEditorSettings();
+  const failed = enabled && intellisense.status === 'error';
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            role="switch"
+            aria-checked={enabled}
+            data-status={enabled ? intellisense.status : 'off'}
+            onClick={() => saveEditorSettings({ intellisense: !enabled })}
+            size="sm"
+            type="button"
+            variant="ghost"
+          />
+        }
+      >
+        <span
+          aria-hidden
+          data-icon="inline-start"
+          className={cn(
+            'size-2 rounded-full',
+            !enabled
+              ? 'bg-muted-foreground/40'
+              : failed
+                ? 'bg-destructive'
+                : 'bg-emerald-500',
+            enabled && intellisense.status === 'starting' && 'animate-pulse',
+          )}
+        />
+        IntelliSense
+      </TooltipTrigger>
+      <TooltipContent>
+        {intelliSenseHint(intellisense.status, enabled)}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function TopBar() {
-  const { vm, boot, showWelcome, resetLayout } = useWorkspace();
+  const { vm, boot, showWelcome, resetLayout, hasOpenFiles } = useWorkspace();
   const booted = isBooted(vm.phase);
   return (
     <>
@@ -80,6 +143,7 @@ export function TopBar() {
           Mininet Web Playground
         </h1>
         <div className="flex-1" />
+        {hasOpenFiles ? <IntelliSenseToggle /> : null}
         <Button onClick={showWelcome} size="sm" type="button" variant="ghost">
           <CircleHelpIcon data-icon="inline-start" />
           Help
