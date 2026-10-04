@@ -63,14 +63,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --terminal: #111111;
-  --terminal-foreground: oklch(0.985 0 0);
-  --terminal-cursor: oklch(0.922 0 0);
-  --terminal-selection: oklch(0.269 0 0);
-  --terminal-muted-foreground: oklch(0.708 0 0);
-}
-
 :root,
 .light {
   color-scheme: light;
@@ -110,6 +102,26 @@
   --explorer-hover: oklch(0.955 0 0);
   --explorer-selected: oklch(0.905 0 0);
   --explorer-focus: oklch(0.6 0.19 255);
+  --terminal: #ffffff;
+  --terminal-foreground: oklch(0.145 0 0);
+  --terminal-cursor: oklch(0.205 0 0);
+  --terminal-selection: oklch(0.87 0 0);
+  --terminal-black: #24292f;
+  --terminal-red: #cf222e;
+  --terminal-green: #116329;
+  --terminal-yellow: #7d4e00;
+  --terminal-blue: #0969da;
+  --terminal-magenta: #8250df;
+  --terminal-cyan: #1b7c83;
+  --terminal-white: #6e7781;
+  --terminal-bright-black: #57606a;
+  --terminal-bright-red: #a40e26;
+  --terminal-bright-green: #1a7f37;
+  --terminal-bright-yellow: #633c01;
+  --terminal-bright-blue: #218bff;
+  --terminal-bright-magenta: #a475f9;
+  --terminal-bright-cyan: #3192aa;
+  --terminal-bright-white: #8c959f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -150,6 +162,26 @@
     --explorer-hover: oklch(0.25 0 0);
     --explorer-selected: oklch(0.32 0 0);
     --explorer-focus: oklch(0.68 0.16 255);
+    --terminal: #111111;
+    --terminal-foreground: oklch(0.985 0 0);
+    --terminal-cursor: oklch(0.922 0 0);
+    --terminal-selection: oklch(0.269 0 0);
+    --terminal-black: #2e3436;
+    --terminal-red: #cc0000;
+    --terminal-green: #4e9a06;
+    --terminal-yellow: #c4a000;
+    --terminal-blue: #3465a4;
+    --terminal-magenta: #75507b;
+    --terminal-cyan: #06989a;
+    --terminal-white: #d3d7cf;
+    --terminal-bright-black: #555753;
+    --terminal-bright-red: #ef2929;
+    --terminal-bright-green: #8ae234;
+    --terminal-bright-yellow: #fce94f;
+    --terminal-bright-blue: #729fcf;
+    --terminal-bright-magenta: #ad7fa8;
+    --terminal-bright-cyan: #34e2e2;
+    --terminal-bright-white: #eeeeec;
   }
 }
 
@@ -190,6 +222,26 @@
   --explorer-hover: oklch(0.25 0 0);
   --explorer-selected: oklch(0.32 0 0);
   --explorer-focus: oklch(0.68 0.16 255);
+  --terminal: #111111;
+  --terminal-foreground: oklch(0.985 0 0);
+  --terminal-cursor: oklch(0.922 0 0);
+  --terminal-selection: oklch(0.269 0 0);
+  --terminal-black: #2e3436;
+  --terminal-red: #cc0000;
+  --terminal-green: #4e9a06;
+  --terminal-yellow: #c4a000;
+  --terminal-blue: #3465a4;
+  --terminal-magenta: #75507b;
+  --terminal-cyan: #06989a;
+  --terminal-white: #d3d7cf;
+  --terminal-bright-black: #555753;
+  --terminal-bright-red: #ef2929;
+  --terminal-bright-green: #8ae234;
+  --terminal-bright-yellow: #fce94f;
+  --terminal-bright-blue: #729fcf;
+  --terminal-bright-magenta: #ad7fa8;
+  --terminal-bright-cyan: #34e2e2;
+  --terminal-bright-white: #eeeeec;
 }
 
 @layer base {
@@ -210,18 +262,12 @@
     @apply underline decoration-dashed underline-offset-2 hover:text-primary;
   }
 
+  /* The terminal follows the app's appearance; only its backdrop differs. */
   .terminal-surface {
-    color-scheme: dark;
     background-color: var(--terminal);
     color: var(--terminal-foreground);
     --background: var(--terminal);
     --foreground: var(--terminal-foreground);
-    --muted: var(--terminal-selection);
-    --muted-foreground: var(--terminal-muted-foreground);
-    --primary: var(--terminal-cursor);
-    --primary-foreground: oklch(0.205 0 0);
-    --accent: var(--terminal-selection);
-    --accent-foreground: var(--terminal-foreground);
   }
 
   /* The xterm host fills its panel; `.xterm` is taken out of flow below. */

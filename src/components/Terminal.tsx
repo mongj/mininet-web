@@ -1,5 +1,5 @@
 import { FitAddon } from '@xterm/addon-fit';
-import { Terminal as Xterm } from '@xterm/xterm';
+import { Terminal as Xterm, type ITheme } from '@xterm/xterm';
 import { useEffect, useRef } from 'react';
 
 function readToken(name: string): string {
@@ -8,13 +8,35 @@ function readToken(name: string): string {
     .trim();
 }
 
-function readTerminalTheme() {
-  return {
-    background: readToken('--terminal') || '#111111',
-    foreground: readToken('--terminal-foreground') || '#fafafa',
-    cursor: readToken('--terminal-cursor') || '#e5e5e5',
-    selectionBackground: readToken('--terminal-selection') || '#404040',
+const ANSI_COLORS = [
+  'black',
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'magenta',
+  'cyan',
+  'white',
+] as const;
+
+// Every color is a CSS token, so the appearance blocks in globals.css decide
+// the theme. A missing token leaves xterm's default in place.
+function readTerminalTheme(): ITheme {
+  const token = (name: string) => readToken(`--terminal-${name}`) || undefined;
+  const theme: ITheme = {
+    background: readToken('--terminal') || undefined,
+    foreground: token('foreground'),
+    cursor: token('cursor'),
+    cursorAccent: readToken('--terminal') || undefined,
+    selectionBackground: token('selection'),
   };
+  for (const color of ANSI_COLORS) {
+    const bright =
+      `bright${color[0].toUpperCase()}${color.slice(1)}` as `bright${Capitalize<typeof color>}`;
+    theme[color] = token(color);
+    theme[bright] = token(`bright-${color}`);
+  }
+  return theme;
 }
 
 /**
@@ -72,8 +94,23 @@ export class TerminalSession {
     this.fit();
     const observer = new ResizeObserver(() => this.fit());
     observer.observe(container);
+    // The theme comes from CSS tokens, which change with the root's appearance
+    // class and, when that is unset, with the system setting.
+    const applyTheme = () => {
+      this.xterm.options.theme = readTerminalTheme();
+    };
+    applyTheme();
+    const appearance = new MutationObserver(applyTheme);
+    appearance.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    const system = window.matchMedia('(prefers-color-scheme: dark)');
+    system.addEventListener('change', applyTheme);
     return () => {
       observer.disconnect();
+      appearance.disconnect();
+      system.removeEventListener('change', applyTheme);
       if (this.host.parentElement === container) this.host.remove();
     };
   }
