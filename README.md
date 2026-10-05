@@ -2,9 +2,7 @@
 
 ![Mininet Web Playground: an instant virtual network in your browser.](public/og.png)
 
-[Mininet](https://mininet.org) is great for learning network topologies and experimenting with software defined network (SDN) prototypes. This project is a React SPA that works like a small IDE: a file explorer, a code editor, and an interactive Mininet terminal, in panes you can rearrange. Linux, Mininet, and Open vSwitch run locally in a [v86](https://copy.sh/v86) emulation browser worker, so you can get started immediately with no installation required.
-
-I hope this can be a helpful resource and reduces the barrier for people to learn about networks and SDN!
+[Mininet](https://mininet.org) is great for learning network topologies and experimenting with software defined network (SDN) prototypes. This project is a React SPA that works like a small IDE: a file explorer (with a persistent virtual file system storing files locally on your machine), a code editor, and an interactive terminal Linux, Mininet, and Open vSwitch run locally in a [v86](https://copy.sh/v86) emulation browser worker, so you can get started immediately with no installation required. I hope this can be a helpful resource and reduces the barrier for people to learn about networks and SDN!
 
 ![Demo](demo.png)
 
