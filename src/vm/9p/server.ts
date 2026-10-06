@@ -278,18 +278,28 @@ export class Opfs9pServer {
       this.run(async () => {
         assertHostPath(path);
         if (path === '') throw new P9Error(EISDIR);
-        if (await this.tryKind(path)) await this.requireRegularFile(path);
+        const existed = Boolean(await this.tryKind(path));
+        if (existed) await this.requireRegularFile(path);
         else await this.createFile(path, ROOT_OWNER);
-        await this.handles.withFileAccess(path, undefined, (access) => {
-          let offset = 0;
-          while (offset < data.length) {
-            const n = access.write(data.subarray(offset), { at: offset });
-            if (n <= 0) throw new P9Error(EIO);
-            offset += n;
+        try {
+          await this.handles.withFileAccess(path, undefined, (access) => {
+            let offset = 0;
+            while (offset < data.length) {
+              const n = access.write(data.subarray(offset), { at: offset });
+              if (n <= 0) throw new P9Error(EIO);
+              offset += n;
+            }
+            access.truncate(data.length);
+            access.flush();
+          });
+        } catch (error) {
+          // Do not leave behind a partial file that this call created.
+          if (!existed) {
+            await this.unlink(path, false).catch(() => {});
+            this.notePath(path);
           }
-          access.truncate(data.length);
-          access.flush();
-        });
+          throw error;
+        }
         this.qids.bump(path);
         this.touchModified(path);
       }),

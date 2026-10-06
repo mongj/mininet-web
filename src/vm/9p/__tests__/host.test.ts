@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FsChange } from '../../fs-protocol';
 import { EEXIST, EINVAL, EISDIR, ENOENT } from '../constants';
 import { fsErrorCode } from '../errors';
+import { MemoryFile } from '../memory-opfs';
 import { Opfs9pServer } from '../server';
 import { O_RDONLY, ROOT_FID, TestClient, text } from './client';
 import {
@@ -91,6 +92,34 @@ describe('Opfs9pServer host operations', () => {
     expect(text(await client.read(1, 0))).toBe('short');
     expect((await client.getattr(1)).size).toBe(5n);
     expect(readText(root, [...PLAYGROUND, 'a.txt'])).toBe('short');
+  });
+
+  it('removes a file it created when the write fails', async () => {
+    const client = await connect();
+    await client.server.host.write('old.txt', encoder.encode('keep'));
+    const grow = MemoryFile.prototype.resize;
+    const resize = vi
+      .spyOn(MemoryFile.prototype, 'resize')
+      .mockImplementation(function (this: MemoryFile, size: number) {
+        if (size > this.size) {
+          throw new DOMException('full', 'QuotaExceededError');
+        }
+        grow.call(this, size);
+      });
+    try {
+      await expect(
+        client.server.host.write('new.txt', encoder.encode('lost')),
+      ).rejects.toSatisfy((error) => fsErrorCode(error) === 'no-space');
+      await expect(
+        client.server.host.write('old.txt', encoder.encode('longer text')),
+      ).rejects.toSatisfy((error) => fsErrorCode(error) === 'no-space');
+    } finally {
+      resize.mockRestore();
+    }
+
+    expect(names(await client.server.host.list(''))).toEqual(['old.txt']);
+    await client.server.host.write('new.txt', encoder.encode('retry'));
+    expect(await readHost(client.server, 'new.txt')).toBe('retry');
   });
 
   it('writes through a fid the guest already holds open', async () => {

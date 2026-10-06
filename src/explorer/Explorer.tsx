@@ -21,6 +21,8 @@ import {
   useEffect,
   useRef,
   useState,
+  type ChangeEvent,
+  type DragEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
@@ -57,6 +59,14 @@ import {
   ROOT_ID,
   useTreeRefresh,
 } from '@/explorer/tree';
+import {
+  isExternalFileDrag,
+  sourcesFromDataTransfer,
+  sourcesFromFiles,
+  uploadErrorMessage,
+  uploadToPlayground,
+  type UploadSource,
+} from '@/explorer/upload';
 import { useVisibleRows } from '@/explorer/useVisibleRows';
 import { errorMessage } from '@/lib/errors';
 import {
@@ -66,6 +76,7 @@ import {
   nameProblem,
   parentPath,
   rebasePath,
+  topMostPaths,
 } from '@/lib/paths';
 import type { FileSystemClient } from '@/vm/fs-client';
 
@@ -99,7 +110,10 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
   const [menuTarget, setMenuTarget] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fileDropId, setFileDropId] = useState<string | null>(null);
   const renameSelected = useRef<string | null>(null);
+  const uploadParent = useRef(ROOT_ID);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   async function loadChildren(id: string) {
     const dir = pathOf(id);
@@ -320,6 +334,105 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
     return true;
   }
 
+  function openFilePicker(near: string | null) {
+    uploadParent.current = containerOf(near);
+    fileInput.current?.click();
+  }
+
+  function onPickedFiles(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    if (files.length === 0) return;
+    void uploadInto(uploadParent.current, sourcesFromFiles(files));
+  }
+
+  /**
+   * External file drops are handled on the way down. Row drag handlers stop
+   * the event before it can bubble, which would swallow a drop from outside.
+   */
+  function onFileDragEnter(event: DragEvent<HTMLDivElement>) {
+    if (tree.getState().dnd?.draggedItems) return;
+    if (!isExternalFileDrag(event.dataTransfer)) return;
+    event.preventDefault();
+  }
+
+  function onFileDragOver(event: DragEvent<HTMLDivElement>) {
+    if (tree.getState().dnd?.draggedItems) return;
+    if (!isExternalFileDrag(event.dataTransfer)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'copy';
+    const next = containerOf(rowIdAt(event.target));
+    setFileDropId((current) => (current === next ? current : next));
+  }
+
+  function onFileDragLeave(event: DragEvent<HTMLDivElement>) {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    setFileDropId(null);
+  }
+
+  function onFileDrop(event: DragEvent<HTMLDivElement>) {
+    if (tree.getState().dnd?.draggedItems) return;
+    if (!isExternalFileDrag(event.dataTransfer)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = containerOf(rowIdAt(event.target));
+    setFileDropId(null);
+    void uploadInto(parent, sourcesFromDataTransfer(event.dataTransfer));
+  }
+
+  function rowIdAt(target: EventTarget | null): string | null {
+    if (!(target instanceof Element)) return null;
+    return (
+      target
+        .closest<HTMLElement>('[data-explorer-id]')
+        ?.getAttribute('data-explorer-id') ?? null
+    );
+  }
+
+  async function uploadInto(
+    parent: string,
+    pending: UploadSource[] | Promise<UploadSource[]>,
+  ) {
+    let result;
+    try {
+      result = await uploadToPlayground(fs, pathOf(parent), await pending);
+    } catch (error) {
+      setError(`Could not upload files. ${errorMessage(error)}`);
+      return;
+    }
+    setError(uploadErrorMessage(result.failures));
+    await showUploaded(result.paths);
+  }
+
+  /** Expands whatever holds `paths` and selects the outermost ones. */
+  async function showUploaded(paths: string[]) {
+    const shown = topMostPaths(paths);
+    const open = new Set<string>();
+    for (const path of shown) {
+      let dir = parentPath(path);
+      while (dir !== '') {
+        open.add(idOf(dir));
+        dir = parentPath(dir);
+      }
+    }
+    if (open.size > 0) {
+      tree.applySubStateUpdate('expandedItems', (ids) => [
+        ...new Set([...ids, ...open]),
+      ]);
+    }
+    await settled();
+    const ids = [...open].sort((a, b) => pathOf(a).length - pathOf(b).length);
+    for (const id of ids) {
+      if (!isGone(tree, id)) {
+        await tree.getItemInstance(id).invalidateChildrenIds(true);
+      }
+    }
+    reveal(shown);
+  }
+
   /** What an action applies to: the selection, or just `id` when outside it. */
   function targetsOf(id: string | null): string[] {
     const selected = tree.getState().selectedItems;
@@ -406,6 +519,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
           paddingLeft: ROW_PADDING + item.getItemMeta().level * INDENT,
         }}
         renameSelected={renameSelected}
+        fileDrop={fileDropId === item.getId()}
         onActivate={activate}
         onContextMenu={setMenuTarget}
       />
@@ -436,7 +550,13 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
   const rootLoaded = childrenCache(tree)?.[ROOT_ID] !== undefined;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-[13px]">
+    <div
+      className="flex h-full min-h-0 flex-col bg-background text-[13px]"
+      onDragEnterCapture={onFileDragEnter}
+      onDragLeaveCapture={onFileDragLeave}
+      onDragOverCapture={onFileDragOver}
+      onDropCapture={onFileDrop}
+    >
       <div className="flex h-8 shrink-0 items-center gap-0.5 pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
           playground
@@ -470,6 +590,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
               tree.registerElement(element);
             }}
             className="explorer-tree"
+            data-file-drop={fileDropId === ROOT_ID ? '' : undefined}
             // The tree asks for `position: relative`; the scroller fills its panel.
             style={{ position: 'absolute' }}
             onScroll={visible.onScroll}
@@ -483,7 +604,8 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
             </div>
             {rootLoaded && rowCount === 0 ? (
               <p className="px-3 py-2 text-xs text-muted-foreground">
-                This folder is empty. Create a file to get started.
+                This folder is empty. Drop files here, or create one to get
+                started.
               </p>
             ) : null}
           </div>
@@ -495,6 +617,9 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
           </ContextMenuItem>
           <ContextMenuItem onClick={() => startCreating('dir', menuTarget)}>
             New Folder…
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => openFilePicker(menuTarget)}>
+            Upload file
           </ContextMenuItem>
           <ContextMenuSeparator />
           {menuTarget === null ? (
@@ -549,6 +674,15 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
         paths={pendingDelete}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}
+      />
+      <input
+        ref={fileInput}
+        aria-hidden="true"
+        className="sr-only"
+        multiple
+        tabIndex={-1}
+        type="file"
+        onChange={onPickedFiles}
       />
     </div>
   );

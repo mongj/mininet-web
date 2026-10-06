@@ -9,6 +9,8 @@ interface ExplorerRowProps {
   style: CSSProperties;
   /** The id of the item whose name was selected for the rename in progress. */
   renameSelected: RefObject<string | null>;
+  /** True while files dragged in from outside would land in this folder. */
+  fileDrop: boolean;
   onActivate: (item: ItemInstance<ExplorerItem>) => void;
   onContextMenu: (id: string) => void;
 }
@@ -17,6 +19,7 @@ export function ExplorerRow({
   item,
   style,
   renameSelected,
+  fileDrop,
   onActivate,
   onContextMenu,
 }: ExplorerRowProps) {
@@ -28,8 +31,10 @@ export function ExplorerRow({
     <div
       {...props}
       className="explorer-row"
+      data-explorer-id={id}
       data-selected={item.isSelected() || undefined}
       data-drop-target={item.isDragTarget() || undefined}
+      data-file-drop={fileDrop || undefined}
       title={data.kind === 'symlink' ? `Link to ${data.target}` : undefined}
       style={style}
       onClick={(event: MouseEvent) => {

@@ -505,6 +505,10 @@
   outline: none;
 }
 
+.explorer-tree[data-file-drop] {
+  box-shadow: inset 0 0 0 1px var(--explorer-focus);
+}
+
 .explorer-row {
   position: absolute;
   right: 0;
@@ -530,7 +534,8 @@
   background-color: var(--explorer-selected);
 }
 
-.explorer-row[data-drop-target] {
+.explorer-row[data-drop-target],
+.explorer-row[data-file-drop] {
   background-color: color-mix(in oklch, var(--explorer-focus) 22%, transparent);
 }
 
