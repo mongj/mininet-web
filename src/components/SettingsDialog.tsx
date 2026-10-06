@@ -1,9 +1,23 @@
 import { Tabs } from '@base-ui/react/tabs';
-import { CpuIcon, Settings2Icon, SettingsIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { cn } from 'cn';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CpuIcon,
+  Settings2Icon,
+  SettingsIcon,
+} from 'lucide-react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { EmulatorSettingsPage } from '@/components/settings/EmulatorSettingsPage';
 import { GeneralSettingsPage } from '@/components/settings/GeneralSettingsPage';
-import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +37,21 @@ const SETTINGS_SECTIONS = [
 ] as const;
 
 type SettingsSection = (typeof SETTINGS_SECTIONS)[number]['id'];
+
+type MobileSettingsPage = 'list' | 'detail';
+
+function settingsSectionLabel(section: SettingsSection): string {
+  switch (section) {
+    case 'general':
+      return 'General';
+    case 'emulator':
+      return 'Emulator';
+    default: {
+      const exhaustive: never = section;
+      return exhaustive;
+    }
+  }
+}
 
 /** Stays mounted while hidden so a page keeps its draft across tab switches. */
 function SettingsPanel({
@@ -48,20 +77,46 @@ type SettingsDialogProps = {
   onClearSavedFiles?: () => Promise<ClearPlaygroundResult>;
 };
 
-/** Mounted only while the dialog is open, so each open starts on General. */
-function SettingsDialogBody({
+type SettingsPageProps = SettingsDialogProps & { onClose: () => void };
+
+function SettingsSectionBody({
+  section,
   onResetLayout,
   onClearSavedFiles,
   onClose,
-}: SettingsDialogProps & { onClose: () => void }) {
-  const [section, setSection] = useState<SettingsSection>('general');
-  const title = SETTINGS_SECTIONS.find((item) => item.id === section)?.label;
+}: SettingsPageProps & { section: SettingsSection }) {
+  switch (section) {
+    case 'general':
+      return (
+        <GeneralSettingsPage onResetLayout={onResetLayout} onClose={onClose} />
+      );
+    case 'emulator':
+      return (
+        <EmulatorSettingsPage
+          onClearSavedFiles={onClearSavedFiles}
+          onClose={onClose}
+        />
+      );
+    default: {
+      const exhaustive: never = section;
+      return exhaustive;
+    }
+  }
+}
 
+function DesktopSettings({
+  section,
+  onSectionChange,
+  ...pageProps
+}: SettingsPageProps & {
+  section: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
+}) {
   return (
     <Tabs.Root
       orientation="vertical"
       value={section}
-      onValueChange={setSection}
+      onValueChange={onSectionChange}
       className="flex h-full min-h-0"
     >
       <div className="flex w-40 shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-2 pt-3.25 text-sidebar-foreground">
@@ -88,22 +143,186 @@ function SettingsDialogBody({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DialogHeader className="shrink-0 px-6 pt-6">
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{settingsSectionLabel(section)}</DialogTitle>
         </DialogHeader>
-        <SettingsPanel value="general">
-          <GeneralSettingsPage
-            onResetLayout={onResetLayout}
-            onClose={onClose}
-          />
-        </SettingsPanel>
-        <SettingsPanel value="emulator">
-          <EmulatorSettingsPage
-            onClearSavedFiles={onClearSavedFiles}
-            onClose={onClose}
-          />
-        </SettingsPanel>
+        {SETTINGS_SECTIONS.map((item) => (
+          <SettingsPanel key={item.id} value={item.id}>
+            <SettingsSectionBody section={item.id} {...pageProps} />
+          </SettingsPanel>
+        ))}
       </div>
     </Tabs.Root>
+  );
+}
+
+function MobileSettingsHeader({
+  page,
+  section,
+  onBack,
+  backRef,
+}: {
+  page: MobileSettingsPage;
+  section: SettingsSection;
+  onBack: () => void;
+  backRef: RefObject<HTMLButtonElement | null>;
+}) {
+  switch (page) {
+    case 'list':
+      return (
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
+          <DialogTitle>Settings</DialogTitle>
+        </DialogHeader>
+      );
+    case 'detail':
+      return (
+        <DialogHeader className="shrink-0 flex-row items-center gap-1 px-3 pt-5 pr-14">
+          <button
+            ref={backRef}
+            type="button"
+            aria-label="Back"
+            onClick={onBack}
+            className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+          >
+            <ChevronLeftIcon />
+          </button>
+          <DialogTitle className="min-w-0 truncate">
+            {settingsSectionLabel(section)}
+          </DialogTitle>
+        </DialogHeader>
+      );
+    default: {
+      const exhaustive: never = page;
+      return exhaustive;
+    }
+  }
+}
+
+function MobileSettings({
+  page,
+  section,
+  onOpenSection,
+  onBack,
+  ...pageProps
+}: SettingsPageProps & {
+  page: MobileSettingsPage;
+  section: SettingsSection;
+  onOpenSection: (section: SettingsSection) => void;
+  onBack: () => void;
+}) {
+  const backRef = useRef<HTMLButtonElement>(null);
+  const rowRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
+  const pendingFocus = useRef<'back' | SettingsSection | null>(null);
+
+  useLayoutEffect(() => {
+    const pending = pendingFocus.current;
+    pendingFocus.current = null;
+    if (pending === 'back') {
+      backRef.current?.focus();
+      return;
+    }
+    if (pending) rowRefs.current.get(pending)?.focus();
+  }, [page]);
+
+  function openSection(next: SettingsSection) {
+    pendingFocus.current = 'back';
+    onOpenSection(next);
+  }
+
+  function goBack() {
+    pendingFocus.current = section;
+    onBack();
+  }
+
+  const showingList = page === 'list';
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <MobileSettingsHeader
+        page={page}
+        section={section}
+        onBack={goBack}
+        backRef={backRef}
+      />
+      <nav
+        aria-label="Settings sections"
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4',
+          !showingList && 'hidden',
+        )}
+      >
+        <ul className="overflow-hidden rounded-xl bg-secondary text-secondary-foreground">
+          {SETTINGS_SECTIONS.map(({ id, label, Icon }) => (
+            <li key={id} className="border-b border-border last:border-b-0">
+              <button
+                ref={(node) => {
+                  if (node) rowRefs.current.set(id, node);
+                  else rowRefs.current.delete(id);
+                }}
+                type="button"
+                onClick={() => openSection(id)}
+                className="flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm ring-ring outline-hidden hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-inset active:bg-foreground/10 [&_svg]:size-4 [&_svg]:shrink-0"
+              >
+                <Icon />
+                <span className="min-w-0 flex-1">{label}</span>
+                <ChevronRightIcon className="text-muted-foreground" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div
+        className={cn('flex min-h-0 flex-1 flex-col', showingList && 'hidden')}
+      >
+        {SETTINGS_SECTIONS.map((item) => (
+          <div
+            key={item.id}
+            className={cn(
+              'min-h-0 flex-1 overflow-y-auto p-6',
+              section === item.id ? 'block' : 'hidden',
+            )}
+          >
+            <div className="flex flex-col gap-4">
+              <SettingsSectionBody section={item.id} {...pageProps} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Mounted only while the dialog is open. Desktop starts on General; mobile starts on the section list. */
+function SettingsDialogBody({
+  onResetLayout,
+  onClearSavedFiles,
+  onClose,
+}: SettingsPageProps) {
+  const narrow = useIsMobile();
+  const [section, setSection] = useState<SettingsSection>('general');
+  const [mobilePage, setMobilePage] = useState<MobileSettingsPage>('list');
+  const pageProps = { onResetLayout, onClearSavedFiles, onClose };
+
+  if (narrow) {
+    return (
+      <MobileSettings
+        {...pageProps}
+        page={mobilePage}
+        section={section}
+        onOpenSection={(next) => {
+          setSection(next);
+          setMobilePage('detail');
+        }}
+        onBack={() => setMobilePage('list')}
+      />
+    );
+  }
+
+  return (
+    <DesktopSettings
+      {...pageProps}
+      section={section}
+      onSectionChange={setSection}
+    />
   );
 }
 
@@ -129,7 +348,7 @@ export function SettingsDialog(props: SettingsDialogProps) {
         <TooltipContent>Settings</TooltipContent>
       </Tooltip>
 
-      <DialogContent className="h-[32rem] max-h-[calc(100svh-2rem)] w-[min(42rem,calc(100%-2rem))] max-w-none gap-0 overflow-hidden p-0 sm:max-w-none">
+      <DialogContent className="h-128 max-h-[calc(100svh-2rem)] w-[min(42rem,calc(100%-2rem))] max-w-lg gap-0 overflow-hidden p-0 sm:max-w-lg md:max-w-none">
         <SettingsDialogBody {...props} onClose={() => setOpen(false)} />
       </DialogContent>
     </Dialog>

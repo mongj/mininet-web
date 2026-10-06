@@ -71,7 +71,7 @@ export function EmulatorSettingsPage({
   onClearSavedFiles?: () => Promise<ClearPlaygroundResult>;
   onClose: () => void;
 }) {
-  const [saved] = useState(loadEmulatorSettings);
+  const [saved, setSaved] = useState(loadEmulatorSettings);
   const [memoryInput, setMemoryInput] = useState(String(saved.memoryMb));
   const [vgaInput, setVgaInput] = useState(String(saved.vgaMemoryMb));
   const [clearing, setClearing] = useState(false);
@@ -98,11 +98,13 @@ export function EmulatorSettingsPage({
 
   function handleSave() {
     try {
-      saveEmulatorSettings({
+      const next = saveEmulatorSettings({
         memoryMb: Number(memoryInput),
         vgaMemoryMb: Number(vgaInput),
       });
-      onClose();
+      setSaved(next);
+      setMemoryInput(String(next.memoryMb));
+      setVgaInput(String(next.vgaMemoryMb));
     } catch {
       // Keep the dialog open if persistence fails.
     }
@@ -131,47 +133,50 @@ export function EmulatorSettingsPage({
             onChange={setVgaInput}
           />
         </div>
+
+        <div className="flex items-center gap-3">
+          {dirty ? (
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              Configuration will be applied on the next reboot.
+            </p>
+          ) : null}
+          <Button
+            className="ml-auto w-24"
+            disabled={!dirty}
+            onClick={handleSave}
+            type="button"
+          >
+            Save
+          </Button>
+        </div>
       </section>
 
       {onClearSavedFiles ? (
         <>
           <Separator />
           <section className="grid gap-2">
-            <h3 className="text-sm font-medium">Saved files</h3>
-            <p className="text-xs text-muted-foreground">
-              Remove files saved in /root/playground and restore the demo
-              lab.py. The lab reboots if it is running.
-            </p>
-            <Button
-              disabled={clearing}
-              onClick={() => void handleClearSavedFiles()}
-              type="button"
-              variant="destructive"
-            >
-              Clear saved files
-            </Button>
+            <h3 className="text-sm font-medium">Reset emulator</h3>
+            <div className="flex flex-wrap items-end gap-3">
+              <p className="min-w-0 flex-1 basis-48 text-xs text-muted-foreground">
+                Resets the emulator, and reboots with the latest settings if it
+                is running. This will clear all your files!
+              </p>
+              <Button
+                className="ml-auto w-24 shrink-0"
+                disabled={clearing}
+                onClick={() => void handleClearSavedFiles()}
+                type="button"
+                variant="destructive"
+              >
+                Reset
+              </Button>
+            </div>
             {clearError ? (
               <p className="text-xs text-destructive">{clearError}</p>
             ) : null}
           </section>
         </>
       ) : null}
-
-      <div className="flex items-center gap-3">
-        {dirty ? (
-          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-            Configuration will be applied on the next reboot.
-          </p>
-        ) : null}
-        <Button
-          className="ml-auto w-20"
-          disabled={!dirty}
-          onClick={handleSave}
-          type="button"
-        >
-          Save
-        </Button>
-      </div>
     </>
   );
 }
