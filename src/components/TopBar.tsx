@@ -5,11 +5,20 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import githubDark from '@/assets/logos/github-dark.svg';
 import githubLight from '@/assets/logos/github-light.svg';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverArrow,
+  PopoverClose,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Tooltip,
   TooltipContent,
@@ -18,6 +27,10 @@ import {
 import type { IntelliSenseStatus } from '@/editor/intellisense/intellisense';
 import { isBooted } from '@/hooks/useVirtualMachine';
 import { saveEditorSettings, useEditorSettings } from '@/lib/editor-settings';
+import {
+  hasSeenIntelliSenseHint,
+  rememberIntelliSenseHint,
+} from '@/lib/intellisense-hint';
 import type { StorageReason } from '@/vm/messages';
 import { useWorkspace } from '@/workspace/context';
 
@@ -97,40 +110,111 @@ function IntelliSenseToggle() {
   const { intellisense } = useWorkspace();
   const { intellisense: enabled } = useEditorSettings();
   const failed = enabled && intellisense.status === 'error';
+  const [hintOpen, setHintOpen] = useState(
+    () => !enabled && !hasSeenIntelliSenseHint(),
+  );
+
+  useEffect(() => {
+    if (!hintOpen) {
+      rememberIntelliSenseHint();
+      return;
+    }
+    // A timeout survives Strict Mode's setup/cleanup, which would otherwise
+    // record the hint before the remounted toggle can show it.
+    const id = window.setTimeout(rememberIntelliSenseHint, 0);
+    return () => window.clearTimeout(id);
+  }, [hintOpen]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    rememberIntelliSenseHint();
+    setHintOpen(false);
+  }, [enabled]);
+
+  function dismissHint() {
+    rememberIntelliSenseHint();
+    setHintOpen(false);
+  }
+
+  function toggleIntelliSense() {
+    saveEditorSettings({ intellisense: !enabled });
+    dismissHint();
+  }
+
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            role="switch"
-            aria-checked={enabled}
-            data-status={enabled ? intellisense.status : 'off'}
-            onClick={() => saveEditorSettings({ intellisense: !enabled })}
-            size="sm"
-            type="button"
-            variant="ghost"
+    <Popover
+      open={hintOpen}
+      onOpenChange={(open) => {
+        if (!open) dismissHint();
+      }}
+    >
+      <Tooltip disabled={hintOpen}>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  role="switch"
+                  aria-checked={enabled}
+                  data-status={enabled ? intellisense.status : 'off'}
+                  onClick={toggleIntelliSense}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                />
+              }
+            />
+          }
+        >
+          <span
+            aria-hidden
+            data-icon="inline-start"
+            className={cn(
+              'size-2 rounded-full',
+              !enabled
+                ? 'bg-muted-foreground/40'
+                : failed
+                  ? 'bg-destructive'
+                  : 'bg-emerald-500',
+              enabled && intellisense.status === 'starting' && 'animate-pulse',
+            )}
           />
-        }
+          IntelliSense
+        </TooltipTrigger>
+        <TooltipContent>
+          {intelliSenseHint(intellisense.status, enabled)}
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        side="bottom"
+        align="center"
+        sideOffset={10}
+        initialFocus={false}
+        finalFocus={false}
+        className="w-64 rounded-md bg-foreground px-3 py-2 pr-7 text-xs text-background shadow-none ring-0"
       >
-        <span
-          aria-hidden
-          data-icon="inline-start"
-          className={cn(
-            'size-2 rounded-full',
-            !enabled
-              ? 'bg-muted-foreground/40'
-              : failed
-                ? 'bg-destructive'
-                : 'bg-emerald-500',
-            enabled && intellisense.status === 'starting' && 'animate-pulse',
-          )}
-        />
-        IntelliSense
-      </TooltipTrigger>
-      <TooltipContent>
-        {intelliSenseHint(intellisense.status, enabled)}
-      </TooltipContent>
-    </Tooltip>
+        <div className="flex flex-col gap-1">
+          <PopoverTitle>Turn on IntelliSense here</PopoverTitle>
+          <PopoverDescription className="text-xs leading-relaxed text-background">
+            Turn it on if you want syntax highlighting, completions, and error
+            checking.
+          </PopoverDescription>
+        </div>
+        <PopoverClose
+          aria-label="Dismiss"
+          render={
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              className="absolute top-1 right-1 text-background hover:bg-background/10 hover:text-background"
+            />
+          }
+        >
+          <XIcon />
+        </PopoverClose>
+        <PopoverArrow className="bg-foreground fill-foreground" />
+      </PopoverContent>
+    </Popover>
   );
 }
 
