@@ -28,6 +28,11 @@ export interface WorkspaceValue {
   /** Focuses the Welcome tab, adding it back if it was closed. */
   showWelcome: () => void;
   resetLayout: () => void;
+  /** Mobile file-explorer drawer. Desktop ignores this and keeps the side pane. */
+  explorerOpen: boolean;
+  setExplorerOpen: (open: boolean) => void;
+  /** Portal target for the mobile file explorer. Null until the dock frame mounts. */
+  explorerDrawer: HTMLElement | null;
 }
 
 export const WorkspaceContext = createContext<WorkspaceValue | null>(null);

@@ -2,6 +2,7 @@ import { cn } from 'cn';
 import {
   CircleHelpIcon,
   RotateCwIcon,
+  SmartphoneIcon,
   TriangleAlertIcon,
   XIcon,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { IntelliSenseStatus } from '@/editor/intellisense/intellisense';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { isBooted } from '@/hooks/useVirtualMachine';
 import { saveEditorSettings, useEditorSettings } from '@/lib/editor-settings';
 import {
@@ -59,6 +61,58 @@ function storageWarning(reason: StorageReason): {
       return exhaustive;
     }
   }
+}
+
+const MOBILE_NOTICE_KEY = 'mininet-web:mobile-notice';
+
+function mobileNoticeDismissed(): boolean {
+  try {
+    return sessionStorage.getItem(MOBILE_NOTICE_KEY) === '1';
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+
+function dismissMobileNotice(): void {
+  try {
+    sessionStorage.setItem(MOBILE_NOTICE_KEY, '1');
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/** Shown once per tab while the viewport is narrow, until dismissed. */
+function MobileNotice() {
+  const mobile = useIsMobile();
+  const [dismissed, setDismissed] = useState(mobileNoticeDismissed);
+  if (!mobile || dismissed) return null;
+  return (
+    <div
+      role="alert"
+      className="mx-1.5 mb-1.5 flex shrink-0 items-start gap-2 rounded-[10px] border border-amber-500/30 bg-amber-500/10 py-1.5 pr-1.5 pl-3 text-xs"
+    >
+      <SmartphoneIcon className="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <p className="min-w-0 flex-1 py-0.5">
+        <span className="font-medium">You're on a small screen.</span>{' '}
+        <span className="text-muted-foreground">
+          This app is built for desktop, and will be quite hard to use on
+          mobile.
+        </span>
+      </p>
+      <Button
+        aria-label="Dismiss"
+        size="icon-xs"
+        variant="ghost"
+        onClick={() => {
+          dismissMobileNotice();
+          setDismissed(true);
+        }}
+      >
+        <XIcon />
+      </Button>
+    </div>
+  );
 }
 
 function StorageBanner({ reason }: { reason: StorageReason }) {
@@ -272,6 +326,7 @@ export function TopBar() {
           }
         />
       </header>
+      <MobileNotice />
       {vm.storage?.persistent === false ? (
         // Keyed so that a new warning shows even after the last was dismissed.
         <StorageBanner key={vm.storage.reason} reason={vm.storage.reason} />

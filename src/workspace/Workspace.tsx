@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { DocumentStore } from '@/editor/documents';
 import { IntelliSense } from '@/editor/intellisense/intellisense';
+import { useIsMobile, viewportIsMobile } from '@/hooks/useIsMobile';
 import {
   canBoot,
   isBooted,
@@ -38,6 +39,7 @@ import { useEditorSettings } from '@/lib/editor-settings';
 import { baseName, isPathWithin, rebasePath } from '@/lib/paths';
 import { WorkspaceContext, type WorkspaceValue } from './context';
 import {
+  ExplorerMenuButton,
   ExplorerPanel,
   FilePanel,
   canClose,
@@ -216,6 +218,20 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
   const { intellisense: intellisenseEnabled } = useEditorSettings();
   const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
   const appearance = useResolvedAppearance();
+  const isMobile = useIsMobile();
+  const isMobileRef = useRef(isMobile);
+  const [explorerOpen, setExplorerOpen] = useState(false);
+  const [explorerDrawer, setExplorerDrawer] = useState<HTMLDivElement | null>(
+    null,
+  );
+  const [drawerTop, setDrawerTop] = useState(42);
+  const dockFrame = useRef<HTMLDivElement>(null);
+  const explorerCollapsed = useRef(false);
+  const adjustingExplorer = useRef(false);
+  // Last layout saved while the desktop panes were in place. A phone session
+  // must not replace it.
+  const desktopLayoutRef = useRef<string | null>(null);
+  const holdLayoutSave = useRef(false);
 
   const booted = isBooted(vm.phase);
   const filesReady =
@@ -315,10 +331,62 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
     else addWelcome(api, editorPosition());
   }, [editorPosition]);
 
+  /**
+   * Hides the explorer pane on a phone so the editor can use the width. The
+   * pane opens as a drawer instead. The hidden size is not saved.
+   */
+  const collapseExplorer = useCallback(() => {
+    if (adjustingExplorer.current) return;
+    const panel = dock.current?.getPanel(PANEL.explorer);
+    if (!panel) return;
+    const group = panel.api.group.api;
+    if (!group.isVisible) {
+      explorerCollapsed.current = true;
+      return;
+    }
+    adjustingExplorer.current = true;
+    group.setVisible(false);
+    explorerCollapsed.current = true;
+    adjustingExplorer.current = false;
+  }, []);
+
+  /** Puts back the layout saved on desktop, after a phone session hid the explorer. */
+  const restoreExplorer = useCallback(() => {
+    if (!explorerCollapsed.current || adjustingExplorer.current) return;
+    const api = dock.current;
+    explorerCollapsed.current = false;
+    if (!api) return;
+    const saved = desktopLayoutRef.current;
+    adjustingExplorer.current = true;
+    if (saved) {
+      // Dockview relayouts for the new window size and would otherwise save
+      // that transient grid. Keep the desktop snapshot until it settles.
+      holdLayoutSave.current = true;
+      try {
+        api.fromJSON(JSON.parse(saved));
+        addMissingFixtures(api);
+        localStorage.setItem(LAYOUT_KEY, saved);
+      } catch (error) {
+        console.error(error);
+      }
+      setTimeout(() => {
+        holdLayoutSave.current = false;
+      }, 1000);
+    } else {
+      const panel = api.getPanel(PANEL.explorer);
+      if (panel && !panel.api.group.api.isVisible) {
+        panel.api.group.api.setVisible(true);
+      }
+    }
+    adjustingExplorer.current = false;
+    syncDocuments();
+  }, [syncDocuments]);
+
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
       const api = event.api;
       dock.current = api;
+      desktopLayoutRef.current = localStorage.getItem(LAYOUT_KEY);
       if (restoreLayout(api)) addMissingFixtures(api);
       else addDefaultPanels(api);
       syncDocuments();
@@ -331,28 +399,87 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
           lastEditorGroup.current = panel.group.id;
         }
       });
-      if (coverUntilBoot.current) {
-        showWelcome();
-        api.getPanel(PANEL.welcome)?.api.maximize();
-      }
       let saveTimer: ReturnType<typeof setTimeout> | undefined;
       api.onDidLayoutChange(() => {
+        if (isMobileRef.current) collapseExplorer();
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
-          if (dock.current !== api) return;
+          // A resize across the breakpoint lays the phone sizes out before
+          // React restores the desktop panes. Don't persist that.
+          if (
+            dock.current !== api ||
+            viewportIsMobile() ||
+            explorerCollapsed.current ||
+            adjustingExplorer.current ||
+            holdLayoutSave.current
+          ) {
+            return;
+          }
           try {
-            localStorage.setItem(LAYOUT_KEY, JSON.stringify(api.toJSON()));
+            const saved = JSON.stringify(api.toJSON());
+            desktopLayoutRef.current = saved;
+            localStorage.setItem(LAYOUT_KEY, saved);
           } catch (error) {
             console.error(error);
           }
         }, LAYOUT_SAVE_MS);
       });
-      if (!coverUntilBoot.current) {
+      // Collapse before Welcome is maximized, so restoring that pane does not
+      // bring the side-by-side explorer back on a phone.
+      if (isMobileRef.current) collapseExplorer();
+      if (coverUntilBoot.current) {
+        showWelcome();
+        api.getPanel(PANEL.welcome)?.api.maximize();
+      } else {
         api.getPanel(PANEL.welcome)?.api.exitMaximized();
       }
     },
-    [showWelcome, syncDocuments],
+    [collapseExplorer, showWelcome, syncDocuments],
   );
+
+  useEffect(() => {
+    const wasMobile = isMobileRef.current;
+    isMobileRef.current = isMobile;
+    if (isMobile) {
+      if (!wasMobile) setExplorerOpen(false);
+      collapseExplorer();
+    } else if (wasMobile) {
+      restoreExplorer();
+      setExplorerOpen(false);
+    }
+  }, [collapseExplorer, isMobile, restoreExplorer]);
+
+  useEffect(() => {
+    if (!isMobile || !explorerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExplorerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [explorerOpen, isMobile]);
+
+  useEffect(() => {
+    if (!isMobile || !explorerOpen) return;
+    const measure = () => {
+      const api = dock.current;
+      const host = dockFrame.current;
+      if (!api || !host) return;
+      const group =
+        api.groups.find((each) => each.panels.some(isEditorPanel)) ??
+        api.groups.find((each) => each.panels.length === 0);
+      const header = group?.element.querySelector(
+        '.dv-tabs-and-actions-container',
+      );
+      if (!(header instanceof HTMLElement)) return;
+      const top =
+        header.getBoundingClientRect().bottom -
+        host.getBoundingClientRect().top;
+      if (top > 0) setDrawerTop(top);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [explorerOpen, isMobile]);
 
   const openFile = useCallback(
     (path: string) => {
@@ -361,9 +488,10 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
       const existing = api.panels.find((panel) => filePath(panel) === path);
       if (existing) {
         existing.api.setActive();
-        return;
+      } else {
+        addFilePanel(api, path, { position: editorPosition() });
       }
-      addFilePanel(api, path, { position: editorPosition() });
+      if (isMobileRef.current) setExplorerOpen(false);
     },
     [editorPosition],
   );
@@ -460,7 +588,8 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
     }
     syncDocuments();
     for (const path of open) documents.close(path);
-  }, [documents, syncDocuments]);
+    if (isMobileRef.current) collapseExplorer();
+  }, [collapseExplorer, documents, syncDocuments]);
 
   const value = useMemo<WorkspaceValue>(
     () => ({
@@ -477,6 +606,9 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
       closeTabs,
       showWelcome,
       resetLayout,
+      explorerOpen,
+      setExplorerOpen,
+      explorerDrawer,
     }),
     [
       vm,
@@ -492,6 +624,8 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
       closeTabs,
       showWelcome,
       resetLayout,
+      explorerOpen,
+      explorerDrawer,
     ],
   );
 
@@ -512,11 +646,12 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
   return (
     <WorkspaceContext.Provider value={value}>
       {children}
-      <div className="relative min-h-0 flex-1">
+      <div ref={dockFrame} className="relative min-h-0 flex-1">
         <DockviewReact
           className="absolute inset-0"
           components={components}
           defaultTabComponent={PanelTab}
+          prefixHeaderActionsComponent={ExplorerMenuButton}
           rightHeaderActionsComponent={PaneActions}
           watermarkComponent={Watermark}
           defaultRenderer="always"
@@ -560,6 +695,21 @@ export function Workspace({ vm, terminal, boot, children }: WorkspaceProps) {
             ];
           }}
           onReady={onReady}
+        />
+        {isMobile && explorerOpen ? (
+          <button
+            type="button"
+            aria-label="Close file explorer"
+            className="absolute inset-x-0 bottom-0 z-20 bg-black/25"
+            style={{ top: drawerTop }}
+            onClick={() => setExplorerOpen(false)}
+          />
+        ) : null}
+        <div
+          ref={setExplorerDrawer}
+          hidden={!isMobile || !explorerOpen}
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30"
+          style={{ top: drawerTop }}
         />
       </div>
 

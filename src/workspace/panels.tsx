@@ -7,12 +7,14 @@ import type {
 import {
   FolderTreeIcon,
   Maximize2Icon,
+  MenuIcon,
   Minimize2Icon,
   SparklesIcon,
   TerminalIcon,
   XIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { Credits } from '@/components/Credits';
 import { FileTypeIcon } from '@/components/FileTypeIcon';
 import { TerminalView } from '@/components/Terminal';
@@ -30,6 +32,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { CodeEditor } from '@/editor/CodeEditor';
 import { MAX_EDITABLE_BYTES } from '@/editor/documents';
 import { Explorer } from '@/explorer/Explorer';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { canBoot, type Phase } from '@/hooks/useVirtualMachine';
 import { baseName } from '@/lib/paths';
 import { useWorkspace } from './context';
@@ -115,10 +118,20 @@ function BootPrompt({ compact = false }: { compact?: boolean }) {
 }
 
 export function ExplorerPanel() {
-  const { vm, filesReady, openFile, movePath, deletePath } = useWorkspace();
+  const {
+    vm,
+    filesReady,
+    openFile,
+    movePath,
+    deletePath,
+    explorerOpen,
+    explorerDrawer,
+  } = useWorkspace();
+  const mobile = useIsMobile();
 
+  let body;
   if (filesReady) {
-    return (
+    body = (
       <Explorer
         fs={vm.files}
         onOpenFile={openFile}
@@ -126,36 +139,54 @@ export function ExplorerPanel() {
         onDelete={deletePath}
       />
     );
-  }
-
-  let body;
-  if (canBoot(vm.phase)) {
-    body = <BootPrompt compact />;
+  } else if (canBoot(vm.phase)) {
+    body = (
+      <div className="flex h-full bg-background">
+        <BootPrompt compact />
+      </div>
+    );
   } else if (vm.phase === 'downloading' || vm.phase === 'booting') {
     body = (
-      <Empty>
-        <EmptyHeader>
-          <EmptyMedia>
-            <Spinner />
-          </EmptyMedia>
-          <EmptyDescription>Starting Linux…</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex h-full bg-background">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia>
+              <Spinner />
+            </EmptyMedia>
+            <EmptyDescription>Starting Linux…</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
   } else {
     body = (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Files are not available</EmptyTitle>
-          <EmptyDescription>
-            Linux could not mount /root/playground from the browser, so its
-            files can only be reached from the terminal in this session.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex h-full bg-background">
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Files are not available</EmptyTitle>
+            <EmptyDescription>
+              Linux could not mount /root/playground from the browser, so its
+              files can only be reached from the terminal in this session.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
   }
-  return <div className="flex h-full bg-background">{body}</div>;
+
+  // On a phone the side-by-side split would crush the editor, so the explorer
+  // leaves the grid and opens as a drawer over it.
+  if (!mobile) return body;
+  if (!explorerOpen || explorerDrawer === null) return null;
+  return createPortal(
+    <div
+      id="file-explorer-drawer"
+      className="pointer-events-auto absolute inset-y-0 left-0 flex w-[min(16rem,calc(100%-4.5rem))] min-w-0 flex-col overflow-hidden rounded-r-[10px] border bg-background shadow-lg"
+    >
+      {body}
+    </div>,
+    explorerDrawer,
+  );
 }
 
 export function TerminalPanel() {
@@ -430,6 +461,39 @@ export function PanelTab(props: IDockviewPanelHeaderProps) {
           <XIcon aria-hidden className="size-3" />
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/** Hamburger at the left of the editor tabs. Mobile only. */
+export function ExplorerMenuButton(props: IDockviewHeaderActionsProps) {
+  const mobile = useIsMobile();
+  const { explorerOpen, setExplorerOpen } = useWorkspace();
+  if (!mobile) return null;
+  const { panels } = props;
+  const editor =
+    panels.length === 0 ||
+    panels.some(
+      (panel) =>
+        panel.api.component === PANEL.file ||
+        panel.api.component === PANEL.welcome,
+    );
+  if (!editor) return null;
+  const label = explorerOpen ? 'Close file explorer' : 'Open file explorer';
+  return (
+    <div className="flex h-full items-center pl-1">
+      <Button
+        aria-controls="file-explorer-drawer"
+        aria-expanded={explorerOpen}
+        aria-label={label}
+        title={label}
+        size="icon-xs"
+        type="button"
+        variant="ghost"
+        onClick={() => setExplorerOpen(!explorerOpen)}
+      >
+        <MenuIcon />
+      </Button>
     </div>
   );
 }

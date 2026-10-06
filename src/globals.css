@@ -361,6 +361,12 @@
   overflow: hidden;
 }
 
+/* The prefix slot holds the mobile file-explorer button. With no button, it
+ * must not shift the tabs (desktop, and the explorer and terminal panes). */
+.mininet-dock .dv-pre-actions-container:not(:has(button)) {
+  display: none;
+}
+
 /* Tab dividers stay transparent, so the menu needs its own border and rule. */
 .mininet-dock .dv-context-menu {
   border-color: var(--border);
