@@ -17,7 +17,7 @@ RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 # Build guest rootfs and copy compiled mininet from builder
 FROM --platform=$TARGET_PLATFORM alpine:3.21
 RUN apk add --no-cache \
-    linux-virt=6.12.111-r0 \
+    linux-virt=6.12.112-r0 \
     python3~3.12 \
     py3-setuptools=70.3.0-r0 \
     bash=5.2.37-r0 \
@@ -40,7 +40,9 @@ RUN apk add --no-cache \
     nano=8.2-r0 \
     vim=9.1.1105-r0 \
     conntrack-tools=1.4.8-r0 \
-    curl=8.14.1-r2
+    curl=8.14.1-r2 \
+    bind-tools=9.18.50-r0 \
+    dnsmasq=2.90-r3
 # Mininet NAT shells out to `iptables -t nat`. Alpine's nft iptables needs
 # nf_tables; the legacy binary matches Mininet and the xtables modules we keep.
 RUN ln -sf iptables-legacy /usr/sbin/iptables \
