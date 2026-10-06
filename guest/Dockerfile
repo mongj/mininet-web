@@ -2,7 +2,7 @@
 
 # Build mininet from source
 ARG TARGET_PLATFORM=linux/386
-FROM --platform=$TARGET_PLATFORM alpine:3.21 AS builder
+FROM --platform=$TARGET_PLATFORM alpine:3.24 AS builder
 ARG MININET_VERSION=2.3.0
 RUN apk add --no-cache \
     gcc=14.2.0-r4 \
@@ -15,7 +15,7 @@ RUN curl -fL https://codeload.github.com/mininet/mininet/tar.gz/refs/tags/${MINI
 RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 
 # Build guest rootfs and copy compiled mininet from builder
-FROM --platform=$TARGET_PLATFORM alpine:3.21
+FROM --platform=$TARGET_PLATFORM alpine:3.24
 RUN apk add --no-cache \
     linux-virt=6.12.112-r0 \
     python3~3.12 \
