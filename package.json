@@ -12,7 +12,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "preview": "wrangler preview",
     "deploy": "wrangler deploy",
     "deploy:check": "wrangler deploy --dry-run",
     "prepare:assets": "node scripts/vendor-assets.mjs",
