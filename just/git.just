@@ -107,11 +107,23 @@ done:
     if ! WHY=$(just --quiet --justfile "{{ justfile() }}" git _merged "$BRANCH"); then
       echo "{{ RED }}Error: $BRANCH is not merged into origin/{{ base }} ($WHY); nothing deleted.{{ NORMAL }}"; exit 1
     fi
+    # The remote branch can be ahead of the local one, so it is checked on its own.
+    REMOTE_OID=$(git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" || true)
+    if [ -n "$REMOTE_OID" ] && ! WHY=$(just --quiet --justfile "{{ justfile() }}" git _merged "$BRANCH" "$REMOTE_OID"); then
+      echo "{{ RED }}Error: origin/$BRANCH has work that is not in origin/{{ base }} ($WHY); nothing deleted.{{ NORMAL }}"; exit 1
+    fi
     git checkout "{{ base }}"
     git merge --ff-only "origin/{{ base }}"
     git branch -D "$BRANCH"
-    git push origin --delete "$BRANCH" 2>/dev/null || true
-    echo "{{ GREEN }}Removed $BRANCH (local + remote).{{ NORMAL }}"
+    if [ -z "$REMOTE_OID" ]; then
+      echo "{{ GREEN }}Removed $BRANCH (origin/$BRANCH was already gone).{{ NORMAL }}"
+    # The lease makes the delete fail if someone pushed to the branch after the check.
+    elif git push --quiet --force-with-lease="refs/heads/$BRANCH:$REMOTE_OID" origin ":refs/heads/$BRANCH"; then
+      echo "{{ GREEN }}Removed $BRANCH (local + remote).{{ NORMAL }}"
+    else
+      echo "{{ RED }}Removed the local $BRANCH, but could not delete origin/$BRANCH (see the error above).{{ NORMAL }}" >&2
+      exit 1
+    fi
 
 # Delete local branches whose work is in origin/main (merged, or squash-merged per their GitHub PR)
 prune:
@@ -148,26 +160,27 @@ prune:
     printf "  {{ YELLOW }}Skipped:{{ NORMAL }} %s\n" "${SKIPPED[*]:-(none)}"
     printf "  {{ RED }}Failed:{{ NORMAL }}  %s\n" "${FAILED[*]:-(none)}"
 
-# Exit 0 when every commit on the branch is in origin/main; otherwise print why not and exit 1
+# Exit 0 when every commit on the branch (or on `rev`, for eg. its remote tip) is in origin/main; otherwise print why not and exit 1
 [positional-arguments]
-_merged branch:
+_merged branch rev="":
     #!/usr/bin/env bash
     set -euo pipefail
-    BR="$1"
-    if git merge-base --is-ancestor "$BR" "origin/{{ base }}" 2>/dev/null; then
+    BR="$1" REV="${2:-$1}"
+    if git merge-base --is-ancestor "$REV" "origin/{{ base }}" 2>/dev/null; then
       # A branch that was never pushed and has no commits of its own is new, not merged.
-      if [ "$BR" = "{{ base }}" ] || git config "branch.$BR.merge" >/dev/null; then
+      if [ "$REV" != "$BR" ] || [ "$BR" = "{{ base }}" ] || git config "branch.$BR.merge" >/dev/null; then
         exit 0
       fi
       echo "nothing committed or pushed yet"; exit 1
     fi
     # Squash and rebase merges rewrite the commits, so ask GitHub whether the PR for
-    # this branch merged exactly the commit the branch still points at.
+    # this branch merged exactly the commit being checked, into origin/{{ base }}.
     if ! command -v gh >/dev/null; then
       echo "not in origin/{{ base }}, gh not installed to check its PR"; exit 1
     fi
     set +e
-    OUT=$(gh pr view "$BR" --json state,headRefOid --jq '"\(.state) \(.headRefOid)"' 2>&1); rc=$?
+    OUT=$(gh pr view "$BR" --json state,baseRefName,headRefOid,mergeCommit \
+      --jq '"\(.state) \(.baseRefName) \(.headRefOid) \(.mergeCommit.oid // "-")"' 2>&1); rc=$?
     set -e
     if [ "$rc" -ne 0 ]; then
       if echo "$OUT" | grep -qi 'no pull requests found'; then
@@ -177,13 +190,20 @@ _merged branch:
       fi
       exit 1
     fi
-    STATE=${OUT%% *} HEAD_OID=${OUT#* }
+    read -r STATE PR_BASE HEAD_OID MERGE_OID <<<"$OUT"
     if [ "$STATE" != "MERGED" ]; then
       echo "PR $STATE"; exit 1
     fi
-    # Safe when the local tip is the merged head or one of its ancestors.
-    if git merge-base --is-ancestor "$BR" "$HEAD_OID" 2>/dev/null; then
+    if [ "$PR_BASE" != "{{ base }}" ]; then
+      echo "PR merged into $PR_BASE, not {{ base }}"; exit 1
+    fi
+    if ! git merge-base --is-ancestor "$MERGE_OID" "origin/{{ base }}" 2>/dev/null; then
+      echo "PR merge commit ${MERGE_OID:0:7} is not in origin/{{ base }} yet"; exit 1
+    fi
+    # Safe when the tip is the merged head or one of its ancestors.
+    if git merge-base --is-ancestor "$REV" "$HEAD_OID" 2>/dev/null; then
       exit 0
     fi
-    echo "PR merged at ${HEAD_OID:0:7}, but the local branch is at $(git rev-parse --short "$BR"), which the PR never had"
+    [ "$REV" = "$BR" ] && WHAT="the local branch" || WHAT="the remote branch"
+    echo "PR merged at ${HEAD_OID:0:7}, but $WHAT is at $(git rev-parse --short "$REV"), which the PR never had"
     exit 1
