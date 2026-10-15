@@ -192,6 +192,16 @@ _teardown branch:
     BRANCH="$1"
     WT=$(just --justfile "{{ justfile() }}" worktree path "$BRANCH")
     MAIN=$(git worktree list --porcelain | awk 'NR==1{sub(/^worktree /, ""); print}')
+    # The base branch always "passes" the merge check against itself, so without this
+    # its checkout, the local branch and origin/{{ base }} would all be deleted.
+    if [ "$BRANCH" = "{{ base }}" ]; then
+      echo "{{ RED }}Error: {{ base }} is the base branch; nothing removed. To drop just its checkout: git worktree remove $WT{{ NORMAL }}" >&2
+      exit 1
+    fi
+    if [ "$(cd -- "$WT" && pwd -P)" = "$(cd -- "$MAIN" && pwd -P)" ]; then
+      echo "{{ RED }}Error: $WT is the main checkout, not a linked worktree; nothing removed.{{ NORMAL }}" >&2
+      exit 1
+    fi
     FORCE=()
     if [ -n "$(git -C "$WT" status --porcelain)" ]; then
       git -C "$WT" status --short

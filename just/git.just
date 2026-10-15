@@ -74,18 +74,43 @@ rebase:
       echo "{{ RED }}Error: rebase is for feature branches (currently on $BRANCH){{ NORMAL }}"; exit 1
     fi
     just --justfile "{{ justfile() }}" git sync
-    BEFORE=$(git rev-parse HEAD)
+    # The remote branch this one pushes to: its upstream, else origin/<branch>.
+    REMOTE="" REMOTE_REF="" TRACK=""
+    if TRACK=$(git rev-parse --symbolic-full-name '@{upstream}' 2>/dev/null) && [ "$(git config "branch.$BRANCH.remote")" != "." ]; then
+      REMOTE=$(git config "branch.$BRANCH.remote") REMOTE_REF=$(git config "branch.$BRANCH.merge")
+      [ "$REMOTE" = origin ] || git fetch --quiet "$REMOTE"
+    elif git rev-parse --verify --quiet "refs/remotes/origin/$BRANCH" >/dev/null; then
+      TRACK="refs/remotes/origin/$BRANCH" REMOTE=origin REMOTE_REF="refs/heads/$BRANCH"
+    else
+      TRACK=""
+    fi
+    REMOTE_OID=""
+    if [ -n "$TRACK" ]; then
+      REMOTE_OID=$(git rev-parse "$TRACK")
+      # Rebasing only the local commits and force-pushing would drop commits that exist
+      # only on the remote branch (a teammate's push). --cherry-pick ignores the old
+      # copies of commits already rebased locally; ^origin/main ignores merged-in main.
+      MISSING=$(git rev-list --count --cherry-pick --right-only "HEAD...$REMOTE_OID" "^origin/{{ base }}")
+      if [ "$MISSING" != 0 ]; then
+        echo "{{ RED }}Error: ${TRACK#refs/remotes/} has $MISSING commit(s) not in your local branch; pull or rebase them in first (for eg. 'git pull --rebase'), then re-run.{{ NORMAL }}" >&2
+        git log --oneline --cherry-pick --right-only "HEAD...$REMOTE_OID" "^origin/{{ base }}" >&2
+        exit 1
+      fi
+    fi
     git rebase "origin/{{ base }}"
-    if [ "$(git rev-parse HEAD)" = "$BEFORE" ]; then
+    if [ -z "$TRACK" ]; then
+      echo "{{ YELLOW }}Not on a remote yet; push with 'git push -u origin HEAD' when ready.{{ NORMAL }}"; exit 0
+    fi
+    # Compared with the remote rather than the pre-rebase HEAD, so a rebase whose push
+    # was skipped last time is still offered now.
+    if [ "$(git rev-parse HEAD)" = "$REMOTE_OID" ]; then
       echo "{{ GREEN }}Already up to date, nothing to push.{{ NORMAL }}"; exit 0
     fi
-    if ! git rev-parse --verify --quiet '@{upstream}' >/dev/null; then
-      echo "{{ YELLOW }}No upstream yet; push with 'git push -u origin HEAD' when ready.{{ NORMAL }}"; exit 0
-    fi
-    printf "{{ YELLOW }}Force-push with --force-with-lease? [y/N]{{ NORMAL }} "
+    printf "{{ YELLOW }}Force-push to %s with --force-with-lease? [y/N]{{ NORMAL }} " "${TRACK#refs/remotes/}"
     read -r ans || ans=""
     case "$ans" in
-      y|Y|yes|Yes|YES) git push --force-with-lease ;;
+      # The explicit lease is the tip checked above, so anything pushed since makes this fail.
+      y|Y|yes|Yes|YES) git push --force-with-lease="$REMOTE_REF:$REMOTE_OID" "$REMOTE" "HEAD:$REMOTE_REF" ;;
       *)               echo "{{ YELLOW }}Skipped force-push.{{ NORMAL }}" ;;
     esac
 
