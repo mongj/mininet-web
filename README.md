@@ -15,6 +15,8 @@ yarn install --immutable
 yarn dev
 ```
 
+The package scripts are also available as [just](https://just.systems) recipes, alongside git and worktree helpers. Run `just` to list them, for eg. `just setup`, `just web dev`, `just check` or `just worktree add <branch>`.
+
 Vite serves the app at `http://127.0.0.1:5173`. Click **Boot** to start the guest. The guest image is created from the Dockerfile at build-time, and bundled as static site assets. Docker is not needed to run or deploy the app.
 
 ## Manual Cloudflare deployment
