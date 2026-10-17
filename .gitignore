@@ -10,6 +10,8 @@ dist/
 .dev.vars*
 verification/
 .cursor/
+.claude/settings.local.json
+CLAUDE.local.md
 
 # Copied from node_modules by scripts/vendor-assets.mjs
 public/vm/libv86.mjs

@@ -24,8 +24,10 @@ setup:
     yarn install --immutable
     yarn prepare
 
-# Run the fast checks: typecheck, unit tests, formatting
+# Run the fast checks: typecheck, lint, unit tests, formatting
 check:
-    just web typecheck
-    just web test
-    just web format-check
+    yarn verify:fast
+
+# Run the fast checks, then the production build and asset verification
+verify:
+    yarn verify
