@@ -109,7 +109,7 @@ The application source in this repository is released under the [MIT License](LI
 
 These components are distributed with the app and stay under their own licenses:
 
-- [v86](https://github.com/copy/v86), 0.5.381 — BSD-2-Clause; `public/vm/v86.LICENSE`.
+- [v86](https://github.com/copy/v86), 0.5.471 — BSD-2-Clause; `public/vm/v86.LICENSE`.
 - [Mininet 2.3.0](https://github.com/mininet/mininet/tree/2.3.0) — BSD; license inside the guest at `/usr/share/licenses/mininet/LICENSE` and in `public/pyright/mininet.json`.
 - [xterm.js](https://github.com/xtermjs/xterm.js) — MIT; notices in `public/vm/`.
 - [Monaco Editor](https://github.com/microsoft/monaco-editor) — MIT.
