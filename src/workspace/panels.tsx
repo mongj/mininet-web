@@ -381,14 +381,15 @@ export function FilePanel(props: IDockviewPanelProps<FilePanelParams>) {
   );
 }
 
-function tabIcon(component: string) {
+function TabIcon({ component }: { component: string }) {
+  const className = 'size-3.5 shrink-0 opacity-70';
   switch (component) {
     case PANEL.explorer:
-      return FolderTreeIcon;
+      return <FolderTreeIcon aria-hidden className={className} />;
     case PANEL.terminal:
-      return TerminalIcon;
+      return <TerminalIcon aria-hidden className={className} />;
     default:
-      return SparklesIcon;
+      return <SparklesIcon aria-hidden className={className} />;
   }
 }
 
@@ -404,7 +405,6 @@ export function PanelTab(props: IDockviewPanelHeaderProps) {
   const doc = useSyncExternalStore(documents.subscribe, () =>
     isFile ? documents.getSnapshot(path) : null,
   );
-  const Icon = tabIcon(api.component);
   const dirty = doc?.dirty ?? false;
 
   const closable = canClose(api.component, vm.phase);
@@ -430,7 +430,7 @@ export function PanelTab(props: IDockviewPanelHeaderProps) {
       {isFile ? (
         <FileTypeIcon name={baseName(path)} className="size-3.5 shrink-0" />
       ) : (
-        <Icon aria-hidden className="size-3.5 shrink-0 opacity-70" />
+        <TabIcon component={api.component} />
       )}
       <span
         className={

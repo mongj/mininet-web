@@ -111,7 +111,8 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileDropId, setFileDropId] = useState<string | null>(null);
-  const renameSelected = useRef<string | null>(null);
+  const renameSelectedRef = useRef<string | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const uploadParent = useRef(ROOT_ID);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -148,7 +149,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
       getChildrenWithData: loadChildren,
     },
     scrollToItem: (item) => {
-      const element = scroller.current;
+      const element = scrollerRef.current;
       const index = item?.getItemMeta().index ?? -1;
       if (!element || index < 0) return;
       const top = index * ROW_HEIGHT;
@@ -232,8 +233,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
     ],
   });
   const { refreshAll, settled } = useTreeRefresh(tree, fs);
-  const visible = useVisibleRows(ROW_HEIGHT, OVERSCAN);
-  const scroller = visible.scroller;
+  const visible = useVisibleRows(scrollerRef, ROW_HEIGHT, OVERSCAN);
 
   const expandedItems = tree.getState().expandedItems;
   useEffect(() => {
@@ -242,7 +242,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
 
   const renamingItem = tree.getState().renamingItem;
   useEffect(() => {
-    if (!renamingItem) renameSelected.current = null;
+    if (!renamingItem) renameSelectedRef.current = null;
   }, [renamingItem]);
 
   /** The entries among `items` that dropping on `destination` would move. */
@@ -518,7 +518,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
           top: row * ROW_HEIGHT,
           paddingLeft: ROW_PADDING + item.getItemMeta().level * INDENT,
         }}
-        renameSelected={renameSelected}
+        renameSelectedRef={renameSelectedRef}
         fileDrop={fileDropId === item.getId()}
         onActivate={activate}
         onContextMenu={setMenuTarget}
@@ -586,7 +586,7 @@ export function Explorer({ fs, onOpenFile, onMove, onDelete }: ExplorerProps) {
           <div
             {...tree.getContainerProps('Files in playground')}
             ref={(element) => {
-              scroller.current = element;
+              scrollerRef.current = element;
               tree.registerElement(element);
             }}
             className="explorer-tree"

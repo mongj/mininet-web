@@ -167,6 +167,11 @@ function IntelliSenseToggle() {
   const [hintOpen, setHintOpen] = useState(
     () => !enabled && !hasSeenIntelliSenseHint(),
   );
+  const [prevEnabled, setPrevEnabled] = useState(enabled);
+  if (enabled !== prevEnabled) {
+    setPrevEnabled(enabled);
+    if (enabled) setHintOpen(false);
+  }
 
   useEffect(() => {
     if (!hintOpen) {
@@ -178,12 +183,6 @@ function IntelliSenseToggle() {
     const id = window.setTimeout(rememberIntelliSenseHint, 0);
     return () => window.clearTimeout(id);
   }, [hintOpen]);
-
-  useEffect(() => {
-    if (!enabled) return;
-    rememberIntelliSenseHint();
-    setHintOpen(false);
-  }, [enabled]);
 
   function dismissHint() {
     rememberIntelliSenseHint();
