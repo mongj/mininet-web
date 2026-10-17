@@ -18,6 +18,11 @@ build:
 typecheck *args:
     yarn typecheck "$@"
 
+# Lint with ESLint (fails on warnings); arguments pass through, for eg. `just web lint --fix`
+[positional-arguments]
+lint *args:
+    yarn lint "$@"
+
 # Run the unit tests once; arguments pass through to vitest, for eg. `just web test src/vm`
 [positional-arguments]
 test *args:

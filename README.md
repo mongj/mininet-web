@@ -74,10 +74,12 @@ IntelliSense is off by default. Turning it on (the switch in the top bar while a
 ## Checks
 
 ```sh
-yarn build
+yarn verify
 yarn test:vm
 yarn deploy:check
 ```
+
+`yarn verify` typechecks, lints, runs the unit tests, checks formatting, and builds; CI runs the same command. `yarn verify:fast` skips the build.
 
 The headless test boots the bundled kernel and image in v86. It verifies distinct Linux network namespaces, successful pings, OVS ports, packet loss after disconnecting a link, recovery after reconnecting it, OpenFlow table access, and CLI exit. `verification/v86-smoke.log` contains a recorded run. This test does not create a Docker-based lab or connect to a backend.
 
