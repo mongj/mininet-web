@@ -8,7 +8,7 @@ interface ExplorerRowProps {
   item: ItemInstance<ExplorerItem>;
   style: CSSProperties;
   /** The id of the item whose name was selected for the rename in progress. */
-  renameSelected: RefObject<string | null>;
+  renameSelectedRef: RefObject<string | null>;
   /** True while files dragged in from outside would land in this folder. */
   fileDrop: boolean;
   onActivate: (item: ItemInstance<ExplorerItem>) => void;
@@ -18,7 +18,7 @@ interface ExplorerRowProps {
 export function ExplorerRow({
   item,
   style,
-  renameSelected,
+  renameSelectedRef,
   fileDrop,
   onActivate,
   onContextMenu,
@@ -75,8 +75,8 @@ export function ExplorerRow({
           onClick={(event) => event.stopPropagation()}
           onFocus={(event) => {
             // The input is refocused on every render; select the name once.
-            if (renameSelected.current === id) return;
-            renameSelected.current = id;
+            if (renameSelectedRef.current === id) return;
+            renameSelectedRef.current = id;
             const dot = event.target.value.lastIndexOf('.');
             event.target.setSelectionRange(
               0,
