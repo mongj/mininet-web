@@ -85,7 +85,9 @@ The headless test boots the bundled kernel and image in v86. It verifies distinc
 
 ## Rebuilding the Linux guest
 
-Only needed when changing software inside the guest or `guest/lab.py`. Requires Docker with `linux/386` support.
+Only needed when changing software inside the guest or `guest/lab.py`. On a pull request from a branch in this repository, the Guest workflow (`.github/workflows/guest.yml`) does this for you: when a guest build input changes, it rebuilds the image, runs `yarn verify` and `yarn test:vm`, and commits the regenerated files to the branch. To rebuild a branch without changing an input, for example to pick up newer Alpine packages, run the workflow manually from the Actions tab.
+
+To rebuild locally, you need Docker with `linux/386` support:
 
 ```sh
 yarn build:guest
