@@ -5,9 +5,7 @@ Client-only React 19 + Vite SPA that runs Linux, Mininet and Open vSwitch in a v
 ## Setup
 
 - Node >= 22.12 and Yarn 4.9.2 (Corepack, via `packageManager`). Use `yarn` only, never npm or pnpm.
-- `yarn install --immutable`, then `yarn dev` serves `http://127.0.0.1:5173` (strict port).
-- `yarn test` failing with `command not found: vitest`, or tools behaving like older versions, means `node_modules` is stale after a lockfile bump: rerun `yarn install --immutable`.
-- `just` lists every recipe (`just web …`, `just guest …`, `just worktree …`, `just git …`); they wrap the package scripts.
+- `yarn install --immutable`, then `yarn dev` serves the app locally.
 
 ## Verify
 
