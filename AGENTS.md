@@ -9,12 +9,12 @@ Client-only React 19 + Vite SPA that runs Linux, Mininet and Open vSwitch in a v
 
 ## Verify
 
-| Command             | Runs                                                     | When                                           |
-| ------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| `yarn verify:fast`  | typecheck, ESLint, Vitest, Prettier check (under 10 s)   | After each change                              |
-| `yarn verify`       | `verify:fast`, then production build and asset integrity | Before calling work done; CI runs exactly this |
-| `yarn test:vm`      | Boots the bundled guest in v86 under Node (about 1 min)  | Changes to `src/vm/`, `guest/` or `public/vm/` |
-| `yarn deploy:check` | Wrangler dry run                                         | Changes to `wrangler.jsonc` or build output    |
+| Command             | Runs                                                     | When                                                 |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| `yarn verify:fast`  | typecheck, ESLint, Vitest, Prettier check (under 10 s)   | After each change                                    |
+| `yarn verify`       | `verify:fast`, then production build and asset integrity | Before calling work done; CI runs this and `test:vm` |
+| `yarn test:vm`      | Boots the bundled guest in v86 under Node (about 1 min)  | Changes to `src/vm/`, `guest/` or `public/vm/`       |
+| `yarn deploy:check` | Wrangler dry run                                         | Changes to `wrangler.jsonc` or build output          |
 
 Narrow loops: `yarn test src/vm/9p`, `yarn lint --fix`, `yarn format`. `just check` and `just verify` are aliases.
 
@@ -25,7 +25,7 @@ Work is done only when `yarn verify` passes. Never disable a lint rule, weaken o
 - Three TypeScript projects: `tsconfig.app.json` (DOM), `tsconfig.worker.json` (WebWorker) and `tsconfig.node.json` (`vite.config.ts`). Everything reachable from `src/vm/emulator.worker.ts` compiles against WebWorker libs, so it must not use DOM APIs; modules shared with the page compile under both.
 - Unit tests live in `__tests__/` next to the code, run in the Node environment (no DOM), and must be named `*.test.ts`; `.test.tsx` is not picked up.
 - `public/vm/libv86.mjs`, `public/vm/v86.wasm`, `public/pyright/pyright.worker.js` and the license copies are generated from `node_modules` by `yarn prepare:assets` and gitignored. Do not edit or commit them.
-- The guest image (`public/vm/guest-*.bin`, `guest.json`, `vmlinuz`) is committed and SHA-256 verified by `scripts/verify-assets.mjs`. Regenerate it only with `yarn build:guest` (Docker with `linux/386`), then `yarn test:vm` and `yarn build`. On same-repo PRs, `.github/workflows/guest.yml` does this and commits the result whenever a guest build input changes, so don't commit a local rebuild on top of it. Never hand-edit it. Every static file must stay under 25 MiB.
+- The guest image (`public/vm/guest-*.bin`, `guest.json`, `vmlinuz`) is committed and SHA-256 verified by `scripts/verify-assets.mjs`. Regenerate it only with `yarn build:guest` (Docker with `linux/386`), then `yarn test:vm` and `yarn build`. On same-repo PRs, CI does this and commits the result whenever a guest build input changes, so don't commit a local rebuild on top of it. Never hand-edit it. Every static file must stay under 25 MiB.
 - UI primitives are shadcn on Base UI (`components.json`, `src/components/ui/`); add them with `yarn shadcn add <name>`. Import app code through the `@/` alias.
 - Dependencies are pinned to exact versions (`yarn add -E`); Renovate opens weekly update PRs (`renovate.json`).
 - The husky pre-commit hook runs `yarn format` on the whole repo and re-stages the staged files.

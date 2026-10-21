@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      rebuild-guest:
+        description: Rebuild the guest image and commit it to the branch
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,9 +19,101 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      rebuild-guest: ${{ steps.guest.outputs.rebuild }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - id: guest
+        name: Check whether the guest image needs a rebuild
+        env:
+          REQUESTED: ${{ inputs.rebuild-guest }}
+          ON_DEFAULT_BRANCH: ${{ github.ref_name == github.event.repository.default_branch }}
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            workflow_dispatch)
+              if [ "$REQUESTED" = true ] && [ "$ON_DEFAULT_BRANCH" = true ]; then
+                echo '::error::Rebuild the guest on a branch and open a pull request instead.'
+                exit 1
+              fi
+              rebuild=${REQUESTED:-false}
+              ;;
+            pull_request)
+              pr_head=$(git rev-parse HEAD^2)
+              base=$(git merge-base HEAD^1 "$pr_head")
+              last_build=$(git log -1 --format=%H "$base..$pr_head" -- public/vm/guest.json)
+              if git diff --quiet "${last_build:-$base}" "$pr_head" -- \
+                guest ':!guest/packages.txt' ':!guest/kernel.config' \
+                scripts/build-guest.sh scripts/package-guest.mjs; then
+                rebuild=false
+              else
+                rebuild=true
+              fi
+              ;;
+            *) rebuild=false ;;
+          esac
+          echo "rebuild=$rebuild" >> "$GITHUB_OUTPUT"
+
+  guest:
+    needs: changes
+    if: needs.changes.outputs.rebuild-guest == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    outputs:
+      pushed: ${{ steps.commit.outputs.pushed }}
+    env:
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+      CAN_PUSH: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
+      HUSKY: 0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.head_ref || github.ref }}
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build:guest
+      - run: yarn prepare:assets
+      - run: yarn test:vm
+      - id: commit
+        name: Commit the rebuilt guest and rerun CI on it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$CAN_PUSH" != true ]; then
+            echo '::warning::The guest image is out of date. Rebuild it with yarn build:guest and commit the result.'
+            exit 0
+          fi
+          git add public/vm guest/packages.txt guest/kernel.config public/pyright/mininet.json
+          if git diff --cached --quiet; then
+            echo 'The rebuilt guest matches the committed one.'
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'build(guest): rebuild the guest image'
+          git push origin "HEAD:refs/heads/$BRANCH"
+          gh workflow run ci.yml --ref "$BRANCH"
+          echo 'pushed=true' >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: guest
+    if: ${{ !cancelled() && !failure() && needs.guest.outputs.pushed != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
@@ -25,3 +123,4 @@ jobs:
           cache: yarn
       - run: yarn install --immutable
       - run: yarn verify
+      - run: yarn test:vm

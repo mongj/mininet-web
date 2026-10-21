@@ -30,7 +30,7 @@ Common types are `feat`, `fix`, `docs`, `refactor`, `perf`, `build`, and `chore`
 
 ### Changing the Linux guest
 
-Changes to software inside the guest or to `guest/lab.py` require rebuilding the image. On a pull request from a branch in this repository, the Guest workflow rebuilds it and commits the result to your branch, so you don't need Docker. From a fork, or to check locally, rebuild with Docker with `linux/386` support:
+Changes to software inside the guest or to `guest/lab.py` require rebuilding the image. On a pull request from a branch in this repository, CI rebuilds it and commits the result to your branch, so you don't need Docker. From a fork, or to check locally, rebuild with Docker with `linux/386` support:
 
 ```sh
 yarn build:guest
