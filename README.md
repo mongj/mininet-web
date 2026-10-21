@@ -74,10 +74,12 @@ IntelliSense is off by default. Turning it on (the switch in the top bar while a
 ## Checks
 
 ```sh
-yarn build
+yarn verify
 yarn test:vm
 yarn deploy:check
 ```
+
+`yarn verify` typechecks, lints, runs the unit tests, checks formatting, and builds; CI runs the same command. `yarn verify:fast` skips the build.
 
 The headless test boots the bundled kernel and image in v86. It verifies distinct Linux network namespaces, successful pings, OVS ports, packet loss after disconnecting a link, recovery after reconnecting it, OpenFlow table access, and CLI exit. `verification/v86-smoke.log` contains a recorded run. This test does not create a Docker-based lab or connect to a backend.
 
@@ -107,7 +109,7 @@ The application source in this repository is released under the [MIT License](LI
 
 These components are distributed with the app and stay under their own licenses:
 
-- [v86](https://github.com/copy/v86), 0.5.381 — BSD-2-Clause; `public/vm/v86.LICENSE`.
+- [v86](https://github.com/copy/v86), 0.5.471 — BSD-2-Clause; `public/vm/v86.LICENSE`.
 - [Mininet 2.3.0](https://github.com/mininet/mininet/tree/2.3.0) — BSD; license inside the guest at `/usr/share/licenses/mininet/LICENSE` and in `public/pyright/mininet.json`.
 - [xterm.js](https://github.com/xtermjs/xterm.js) — MIT; notices in `public/vm/`.
 - [Monaco Editor](https://github.com/microsoft/monaco-editor) — MIT.

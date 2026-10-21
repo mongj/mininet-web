@@ -13,7 +13,7 @@ For bugs, it's helpful to include your browser and OS, especially since the enti
 1. Fork the repository and create a branch from `main`.
 2. Make your change. Keep each pull request focused on one thing.
 3. Add or update tests for the behaviour you changed. Unit tests live in `__tests__/` folders next to the code they cover.
-4. Run the checks below.
+4. Run `yarn verify`, the same check CI runs.
 5. Open a pull request against `main`.
 
 ### Commit messages
