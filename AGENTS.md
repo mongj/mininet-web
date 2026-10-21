@@ -27,7 +27,7 @@ Work is done only when `yarn verify` passes. Never disable a lint rule, weaken o
 - `public/vm/libv86.mjs`, `public/vm/v86.wasm`, `public/pyright/pyright.worker.js` and the license copies are generated from `node_modules` by `yarn prepare:assets` and gitignored. Do not edit or commit them.
 - The guest image (`public/vm/guest-*.bin`, `guest.json`, `vmlinuz`) is committed and SHA-256 verified by `scripts/verify-assets.mjs`. Regenerate it only with `yarn build:guest` (Docker with `linux/386`), then `yarn test:vm` and `yarn build`. Never hand-edit it. Every static file must stay under 25 MiB.
 - UI primitives are shadcn on Base UI (`components.json`, `src/components/ui/`); add them with `yarn shadcn add <name>`. Import app code through the `@/` alias.
-- Dependencies are pinned to exact versions (`yarn add -E`); Dependabot bumps them weekly.
+- Dependencies are pinned to exact versions (`yarn add -E`); Renovate opens weekly update PRs (`renovate.json`).
 - The husky pre-commit hook runs `yarn format` on the whole repo and re-stages the staged files.
 - Never run `yarn deploy`, `wrangler deploy` or `wrangler login`. Deploys are manual and done by the maintainer.
 
