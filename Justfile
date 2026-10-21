@@ -4,7 +4,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 default:
     @just --justfile "{{ justfile() }}" --list --list-submodules
 
-# Vite app: dev server, build, typecheck, unit tests, formatting (package.json scripts)
+# Vite app: dev server, build, typecheck, unit tests, formatting
 mod web "just/web.just"
 
 # Cloudflare Workers: local preview and deploy through Wrangler
@@ -19,15 +19,18 @@ mod git "just/git.just"
 # Git worktrees
 mod worktree "just/worktree.just"
 
-# Install dependencies and the husky pre-commit hook
+# Install dependencies. Yarn then runs the prepare script, which installs the husky hook.
 setup:
     yarn install --immutable
-    yarn prepare
 
 # Run the fast checks: typecheck, lint, unit tests, formatting
 check:
-    yarn verify:fast
+    just web typecheck
+    just web lint
+    just web test
+    just web format-check
 
 # Run the fast checks, then the production build and asset verification
 verify:
-    yarn verify
+    just check
+    just web build

@@ -8,14 +8,14 @@
 
 ## Development
 
-Requires Node.js 22.12+ and Yarn 4.9.2.
+Requires Node.js 22.12+, Yarn 4.9.2, and [just](https://just.systems).
 
 ```sh
-yarn install --immutable
-yarn dev
+just setup
+just web dev
 ```
 
-The package scripts are also available as [just](https://just.systems) recipes, alongside git and worktree helpers. Run `just` to list them, for eg. `just setup`, `just web dev`, `just check` or `just worktree add <branch>`.
+`just` is the entrypoint for the dev server, checks, the guest image, Wrangler, and git worktrees. Run `just` to list the recipes. `just setup` installs dependencies with Yarn; the only package script is `prepare`, which Yarn runs on install to set up the husky hook.
 
 Vite serves the app at `http://127.0.0.1:5173`. Click **Boot** to start the guest. The guest image is created from the Dockerfile at build-time, and bundled as static site assets. Docker is not needed to run or deploy the app.
 
@@ -25,18 +25,18 @@ Vite serves the app at `http://127.0.0.1:5173`. Click **Boot** to start the gues
 
 ```sh
 # Inspect packaging locally; this does not deploy.
-yarn deploy:check
+just cf deploy-check
 
 # Serve the production build in the local Workers runtime.
-yarn preview
+just cf preview
 # Open http://127.0.0.1:8787
 
 # When ready, authenticate and deploy manually.
-yarn wrangler login
-yarn deploy
+just cf login
+just cf deploy
 ```
 
-Wrangler's custom build runs `yarn build` before previewing or deploying. The build typechecks the app and browser worker, bundles the React SPA, copies the VM files, and verifies guest-image hashes and asset sizes. `dist/` is generated and ignored by Git.
+Wrangler's custom build runs `just web build` before previewing or deploying. The build typechecks the app and browser worker, bundles the React SPA, copies the VM files, and verifies guest-image hashes and asset sizes. `dist/` is generated and ignored by Git.
 
 The guest is split into chunks below the per-file static-asset limit. All emulator and guest URLs are same-origin under `/vm/`; Vite's hashed application bundles are under `/assets/`. Use HTTPS outside localhost because image verification uses Web Crypto. No cross-origin isolation headers are required.
 
@@ -69,17 +69,17 @@ The network starts in OVS standalone learning mode; no SDN controller is bundled
 
 The worker serves `/root/playground` to the guest over 9P and to the page through the same server, so the Explorer and editor see what the shell sees, and the worker reports the guest's changes back to them. When OPFS is locked by another tab or unavailable, the same folder is served from memory instead: the Explorer and editor keep working, and the files last until the reload. The pane layout is saved in `localStorage`.
 
-IntelliSense is off by default. Turning it on (the switch in the top bar while a file is open, or Settings) starts [basedpyright](https://docs.basedpyright.com) in web workers the first time a Python file is open, and gives completions, hovers, signature help, semantic colouring and error checking, including for the Mininet API. Nothing is sent anywhere: the server runs in the browser, reading the playground's Python files and `public/pyright/mininet.json`, the Mininet source exported from the guest image by `yarn build:guest`.
+IntelliSense is off by default. Turning it on (the switch in the top bar while a file is open, or Settings) starts [basedpyright](https://docs.basedpyright.com) in web workers the first time a Python file is open, and gives completions, hovers, signature help, semantic colouring and error checking, including for the Mininet API. Nothing is sent anywhere: the server runs in the browser, reading the playground's Python files and `public/pyright/mininet.json`, the Mininet source exported from the guest image by `just guest build`.
 
 ## Checks
 
 ```sh
-yarn verify
-yarn test:vm
-yarn deploy:check
+just verify
+just guest test
+just cf deploy-check
 ```
 
-`yarn verify` typechecks, lints, runs the unit tests, checks formatting, and builds; CI runs the same command. `yarn verify:fast` skips the build.
+`just verify` typechecks, lints, runs the unit tests, checks formatting, and builds; CI runs the same command. `just check` skips the build.
 
 The headless test boots the bundled kernel and image in v86. It verifies distinct Linux network namespaces, successful pings, OVS ports, packet loss after disconnecting a link, recovery after reconnecting it, OpenFlow table access, and CLI exit. `verification/v86-smoke.log` contains a recorded run. This test does not create a Docker-based lab or connect to a backend.
 
@@ -88,10 +88,10 @@ The headless test boots the bundled kernel and image in v86. It verifies distinc
 Only needed when changing software inside the guest or `guest/lab.py`. Requires Docker with `linux/386` support.
 
 ```sh
-yarn build:guest
-yarn test:vm
-yarn build
+just guest rebuild
 ```
+
+`just guest rebuild` rebuilds the image, smoke-tests it in v86, and rebuilds the app.
 
 `guest/Dockerfile` creates an Alpine x86 environment with Mininet 2.3.0, Python, OVS, and networking utilities. It compiles `mnexec` and includes the namespace, veth, OVS, and link-shaping kernel modules. `scripts/build-guest.sh` exports the kernel and compressed initramfs to `public/vm/`.
 

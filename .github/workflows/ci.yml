@@ -23,5 +23,8 @@ jobs:
         with:
           node-version: 24
           cache: yarn
-      - run: yarn install --immutable
-      - run: yarn verify
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: '1.59.0'
+      - run: just setup
+      - run: just verify

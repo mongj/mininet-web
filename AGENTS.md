@@ -4,32 +4,33 @@ Client-only React 19 + Vite SPA that runs Linux, Mininet and Open vSwitch in a v
 
 ## Setup
 
-- Node >= 22.12 and Yarn 4.9.2 (Corepack, via `packageManager`). Use `yarn` only, never npm or pnpm.
-- `yarn install --immutable`, then `yarn dev` serves the app locally.
+- Node >= 22.12, Yarn 4.9.2 (Corepack, via `packageManager`), and [just](https://just.systems). Use `yarn` only as the package manager, never npm or pnpm.
+- `just setup` installs dependencies, then `just web dev` serves the app locally.
+- Commands live in the `Justfile` and `just/`. Recipes invoke the tools directly (`tsc`, `eslint`, `vitest`, `vite`, `wrangler`, `node scripts/…`). The only `package.json` script is `prepare` (`husky`): Yarn runs it on install, which a recipe cannot replace. Do not add task scripts.
 
 ## Verify
 
-| Command             | Runs                                                     | When                                           |
-| ------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| `yarn verify:fast`  | typecheck, ESLint, Vitest, Prettier check (under 10 s)   | After each change                              |
-| `yarn verify`       | `verify:fast`, then production build and asset integrity | Before calling work done; CI runs exactly this |
-| `yarn test:vm`      | Boots the bundled guest in v86 under Node (about 1 min)  | Changes to `src/vm/`, `guest/` or `public/vm/` |
-| `yarn deploy:check` | Wrangler dry run                                         | Changes to `wrangler.jsonc` or build output    |
+| Command                | Runs                                                        | When                                           |
+| ---------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| `just check`           | typecheck, ESLint, Vitest, Prettier check (under 10 s)      | After each change                              |
+| `just verify`          | `just check`, then the production build and asset integrity | Before calling work done; CI runs exactly this |
+| `just guest test`      | Boots the bundled guest in v86 under Node (about 1 min)     | Changes to `src/vm/`, `guest/` or `public/vm/` |
+| `just cf deploy-check` | Wrangler dry run                                            | Changes to `wrangler.jsonc` or build output    |
 
-Narrow loops: `yarn test src/vm/9p`, `yarn lint --fix`, `yarn format`. `just check` and `just verify` are aliases.
+Narrow loops: `just web test src/vm/9p`, `just web lint --fix`, `just web format`.
 
-Work is done only when `yarn verify` passes. Never disable a lint rule, weaken or skip a test, or add `@ts-ignore` to get green; fix the cause or ask.
+Work is done only when `just verify` passes. Never disable a lint rule, weaken or skip a test, or add `@ts-ignore` to get green; fix the cause or ask.
 
 ## Gotchas
 
 - Three TypeScript projects: `tsconfig.app.json` (DOM), `tsconfig.worker.json` (WebWorker) and `tsconfig.node.json` (`vite.config.ts`). Everything reachable from `src/vm/emulator.worker.ts` compiles against WebWorker libs, so it must not use DOM APIs; modules shared with the page compile under both.
 - Unit tests live in `__tests__/` next to the code, run in the Node environment (no DOM), and must be named `*.test.ts`; `.test.tsx` is not picked up.
-- `public/vm/libv86.mjs`, `public/vm/v86.wasm`, `public/pyright/pyright.worker.js` and the license copies are generated from `node_modules` by `yarn prepare:assets` and gitignored. Do not edit or commit them.
-- The guest image (`public/vm/guest-*.bin`, `guest.json`, `vmlinuz`) is committed and SHA-256 verified by `scripts/verify-assets.mjs`. Regenerate it only with `yarn build:guest` (Docker with `linux/386`), then `yarn test:vm` and `yarn build`. Never hand-edit it. Every static file must stay under 25 MiB.
-- UI primitives are shadcn on Base UI (`components.json`, `src/components/ui/`); add them with `yarn shadcn add <name>`. Import app code through the `@/` alias.
+- `public/vm/libv86.mjs`, `public/vm/v86.wasm`, `public/pyright/pyright.worker.js` and the license copies are generated from `node_modules` by `just web prepare-assets` and gitignored. Do not edit or commit them.
+- The guest image (`public/vm/guest-*.bin`, `guest.json`, `vmlinuz`) is committed and SHA-256 verified by `scripts/verify-assets.mjs`. Regenerate it only with `just guest rebuild` (Docker with `linux/386`). Never hand-edit it. Every static file must stay under 25 MiB.
+- UI primitives are shadcn on Base UI (`components.json`, `src/components/ui/`); add them with `just web shadcn add <name>`. Import app code through the `@/` alias.
 - Dependencies are pinned to exact versions (`yarn add -E`); Dependabot bumps them weekly.
-- The husky pre-commit hook runs `yarn format` on the whole repo and re-stages the staged files.
-- Never run `yarn deploy`, `wrangler deploy` or `wrangler login`. Deploys are manual and done by the maintainer.
+- The husky pre-commit hook runs `just web format` on the whole repo and re-stages the staged files.
+- Never run `just cf deploy`, `just cf login`, `wrangler deploy` or `wrangler login`. Deploys are manual and done by the maintainer.
 
 ## Code rules
 

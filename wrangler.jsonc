@@ -3,7 +3,7 @@
   "name": "mininet-web",
   "compatibility_date": "2026-09-24",
   "build": {
-    "command": "yarn build",
+    "command": "just web build",
   },
   "assets": {
     "directory": "./dist",

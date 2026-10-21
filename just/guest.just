@@ -7,11 +7,11 @@ default:
 
 # Rebuild the guest kernel and initramfs into public/vm/ (needs Docker with linux/386 and zstd)
 build:
-    yarn build:guest
+    bash scripts/build-guest.sh
 
 # Boot the guest in v86 under Node and run the Mininet smoke test
 test:
-    yarn test:vm
+    node scripts/smoke-vm.cjs
 
 # Rebuild the guest, smoke-test it, then rebuild the app around it
 rebuild:

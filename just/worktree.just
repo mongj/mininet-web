@@ -46,9 +46,9 @@ add branch:
       fi
     fi
     echo "{{ YELLOW }}Installing dependencies in the new worktree...{{ NORMAL }}"
-    if ! (cd "$WT" && yarn install --immutable && yarn prepare); then
+    if ! (cd "$WT" && just setup); then
       echo "{{ RED }}Worktree created at $WT, but installing dependencies failed.{{ NORMAL }}" >&2
-      echo "{{ YELLOW }}Finish setup with: cd $WT && yarn install --immutable && yarn prepare{{ NORMAL }}" >&2
+      echo "{{ YELLOW }}Finish setup with: cd $WT && just setup{{ NORMAL }}" >&2
       exit 1
     fi
     echo "{{ GREEN }}Worktree ready at $WT{{ NORMAL }}"
