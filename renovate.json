@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    "schedule:weekly",
+    ":semanticCommitTypeAll(build)",
+    ":semanticCommitScope(deps)"
+  ],
+  "timezone": "Asia/Singapore",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["@types/node"],
+      "allowedVersions": "<23"
+    },
+    {
+      "matchFileNames": ["guest/**"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
