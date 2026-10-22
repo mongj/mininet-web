@@ -85,9 +85,7 @@ The headless test boots the bundled kernel and image in v86. It verifies distinc
 
 ## Rebuilding the Linux guest
 
-Only needed when changing software inside the guest or `guest/lab.py`. On a pull request from a branch in this repository, CI (`.github/workflows/ci.yml`) does this for you: when a guest build input has changed since the image was last rebuilt, it rebuilds the image, smoke-tests it, commits the regenerated files to the branch and reruns CI on that commit. To rebuild a branch without changing an input, for example to pick up newer Alpine packages, run the CI workflow manually from the Actions tab with **Rebuild the guest image** checked.
-
-To rebuild locally, you need Docker with `linux/386` support:
+Only needed when changing software inside the guest or `guest/lab.py`. On a pull request from a branch in this repository, CI (`.github/workflows/ci.yml`) does this for you: when a guest build input has changed since the image was last rebuilt, it rebuilds the image, smoke-tests it, and commits the regenerated files to the branch. GitHub holds the CI run for that commit until a maintainer clicks **Approve and run** on the pull request. To pick up newer Alpine packages without changing an input, rebuild locally, which needs Docker with `linux/386` support:
 
 ```sh
 yarn build:guest
