@@ -4,8 +4,6 @@ on:
   pull_request:
     paths:
       - guest/**
-      - '!guest/packages.txt'
-      - '!guest/kernel.config'
       - scripts/build-guest.sh
       - scripts/package-guest.mjs
 
