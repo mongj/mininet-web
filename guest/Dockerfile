@@ -5,10 +5,10 @@ ARG TARGET_PLATFORM=linux/386
 FROM --platform=$TARGET_PLATFORM alpine:3.21 AS builder
 ARG MININET_VERSION=2.3.0
 RUN apk add --no-cache \
-    gcc=14.2.0-r4 \
-    musl-dev=1.2.5-r11 \
-    linux-headers=6.6-r1 \
-    curl=8.14.1-r2
+    gcc~14.2 \
+    musl-dev~1.2 \
+    linux-headers~6.6 \
+    curl~8.14
 RUN curl -fL https://codeload.github.com/mininet/mininet/tar.gz/refs/tags/${MININET_VERSION} -o /tmp/mininet.tar.gz \
     && tar -xzf /tmp/mininet.tar.gz -C /tmp \
     && mv /tmp/mininet-* /src
@@ -17,32 +17,32 @@ RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 # Build guest rootfs and copy compiled mininet from builder
 FROM --platform=$TARGET_PLATFORM alpine:3.21
 RUN apk add --no-cache \
-    linux-virt=6.12.112-r0 \
+    linux-virt~6.12 \
     python3~3.12 \
-    py3-setuptools=70.3.0-r0 \
-    bash=5.2.37-r0 \
-    iproute2=6.11.0-r0 \
-    iproute2-tc=6.11.0-r0 \
-    net-tools=2.10-r3 \
-    iputils=20240905-r0 \
-    procps-ng=4.0.4-r2 \
-    util-linux=2.40.4-r1 \
-    bridge-utils=1.7.1-r2 \
-    openvswitch=2.17.11-r0 \
-    tcpdump=4.99.5-r0 \
-    iperf3=3.17.1-r0 \
-    inetutils-telnet=2.5-r0 \
-    ethtool=6.11-r0 \
-    iptables=1.8.11-r1 \
-    iptables-legacy=1.8.11-r1 \
-    traceroute=2.1.6-r0 \
-    coreutils=9.5-r2 \
-    nano=8.2-r0 \
-    vim=9.1.1105-r0 \
-    conntrack-tools=1.4.8-r0 \
-    curl=8.14.1-r2 \
-    bind-tools=9.18.50-r0 \
-    dnsmasq=2.90-r3
+    py3-setuptools~70.3 \
+    bash~5.2 \
+    iproute2~6.11 \
+    iproute2-tc~6.11 \
+    net-tools~2.10 \
+    iputils~20240905 \
+    procps-ng~4.0 \
+    util-linux~2.40 \
+    bridge-utils~1.7 \
+    openvswitch~2.17 \
+    tcpdump~4.99 \
+    iperf3~3.17 \
+    inetutils-telnet~2.5 \
+    ethtool~6.11 \
+    iptables~1.8 \
+    iptables-legacy~1.8 \
+    traceroute~2.1 \
+    coreutils~9.5 \
+    nano~8.2 \
+    vim~9.1 \
+    conntrack-tools~1.4 \
+    curl~8.14 \
+    bind-tools~9.18 \
+    dnsmasq~2.90
 # Mininet NAT shells out to `iptables -t nat`. Alpine's nft iptables needs
 # nf_tables; the legacy binary matches Mininet and the xtables modules we keep.
 RUN ln -sf iptables-legacy /usr/sbin/iptables \
@@ -50,7 +50,7 @@ RUN ln -sf iptables-legacy /usr/sbin/iptables \
 # alpine:3.21 only ships iperf 2.2.0. Mininet 2.3.0 needs 2.0.13's server report.
 RUN apk add --no-cache \
     --repository https://dl-cdn.alpinelinux.org/alpine/v3.12/main \
-    iperf=2.0.13-r2
+    iperf~2.0
 
 COPY --from=builder /src/bin/mn /usr/bin/mn
 COPY --from=builder /mnexec /usr/bin/mnexec
