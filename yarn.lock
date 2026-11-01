@@ -2187,9 +2187,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"browser-basedpyright@npm:1.40.1":
-  version: 1.40.1
-  resolution: "browser-basedpyright@npm:1.40.1"
+"browser-basedpyright@npm:1.40.2":
+  version: 1.40.2
+  resolution: "browser-basedpyright@npm:1.40.2"
   dependencies:
     buffer: "npm:^6.0.3"
     crypto-browserify: "npm:^3.12.0"
@@ -2199,7 +2199,7 @@ __metadata:
     util: "npm:^0.12.5"
     vm-browserify: "npm:^1.1.2"
     vscode-languageserver: "npm:^10.0.0-next.13"
-  checksum: 10c0/50a11cf03ad1a685486a579d58202942778ce332da6ad6ae711193d9c8362e10a17775e43f8ee230cdfdfe6a4ad17ddc717308ec76fb4ab9a2581831a96c7ff7
+  checksum: 10c0/5e54b2f9b58a0da176e27ca9d573d45774ef9d16672c73771ec7fac736b397227c823d45dd70c227758a0e1ff3132dcf49ab842517f89c2deac5b51264fe553d
   languageName: node
   linkType: hard
 
@@ -4788,7 +4788,7 @@ __metadata:
     "@vitejs/plugin-react": "npm:6.1.2"
     "@xterm/addon-fit": "npm:0.11.0"
     "@xterm/xterm": "npm:6.0.0"
-    browser-basedpyright: "npm:1.40.1"
+    browser-basedpyright: "npm:1.40.2"
     class-variance-authority: "npm:0.7.1"
     cn: "npm:0.4.0"
     dockview-react: "npm:8.4.0"
