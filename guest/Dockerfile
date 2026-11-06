@@ -6,9 +6,9 @@ FROM --platform=$TARGET_PLATFORM alpine:3.21 AS builder
 ARG MININET_VERSION=2.3.0
 RUN apk add --no-cache \
     gcc=14.2.0-r4 \
-    musl-dev=1.2.5-r11 \
+    musl-dev=1.2.5-r12 \
     linux-headers=6.6-r1 \
-    curl=8.14.1-r2
+    curl=8.14.1-r3
 RUN curl -fL https://codeload.github.com/mininet/mininet/tar.gz/refs/tags/${MININET_VERSION} -o /tmp/mininet.tar.gz \
     && tar -xzf /tmp/mininet.tar.gz -C /tmp \
     && mv /tmp/mininet-* /src
@@ -17,7 +17,7 @@ RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 # Build guest rootfs and copy compiled mininet from builder
 FROM --platform=$TARGET_PLATFORM alpine:3.21
 RUN apk add --no-cache \
-    linux-virt=6.12.112-r0 \
+    linux-virt=6.12.115-r0 \
     python3~3.12 \
     py3-setuptools=70.3.0-r0 \
     bash=5.2.37-r0 \
@@ -40,7 +40,7 @@ RUN apk add --no-cache \
     nano=8.2-r0 \
     vim=9.1.1105-r0 \
     conntrack-tools=1.4.8-r0 \
-    curl=8.14.1-r2 \
+    curl=8.14.1-r3 \
     bind-tools=9.18.50-r0 \
     dnsmasq=2.90-r3
 # Mininet NAT shells out to `iptables -t nat`. Alpine's nft iptables needs
