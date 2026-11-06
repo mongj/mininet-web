@@ -71,6 +71,19 @@ async function pushFile(guestPath, hostPath) {
   const encoded = fs.readFileSync(hostPath).toString('base64');
   return sh(`printf '%s' '${encoded}' | base64 -d > ${guestPath}`);
 }
+async function controllerStatus(timeout = 90000) {
+  const until = Date.now() + timeout;
+  let out = '';
+  while (Date.now() < until) {
+    out = await command(
+      'sh ovs-vsctl --columns=target,is_connected list controller',
+    );
+    if (/is_connected\s*: true/.test(out)) return out;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  console.log(await command('sh cat /tmp/c0.log; sh netstat -ltn'));
+  return out;
+}
 function pass(name, detail = '') {
   results.push({ name, ok: true, detail });
 }
@@ -127,6 +140,54 @@ function requireMatch(name, output, pattern) {
     ]) {
       requireMatch('tool.' + name, tools, new RegExp('HAVE ' + name));
     }
+
+    const controllerStart = await atPrompt(
+      'mn --topo single,2',
+      /mininet> $/,
+      120000,
+    );
+    requireMatch('mn.controller.added', controllerStart, /Adding controller/);
+    requireMatch('mn.controller.c0', controllerStart, /\bc0\b/);
+    requireMatch(
+      'mn.controller.nodes',
+      await command('nodes'),
+      /available nodes are:[\s\S]*\bc0\b[\s\S]*\bs1\b/,
+    );
+    requireMatch(
+      'mn.controller.connected',
+      await controllerStatus(),
+      /is_connected\s*: true/,
+    );
+    requireMatch(
+      'mn.controller.pingall',
+      await command('pingall', 120000),
+      /0% dropped \(2\/2 received\)/,
+    );
+    const learnedFlows = await command('sh ovs-ofctl dump-flows s1');
+    requireMatch('mn.controller.flows', learnedFlows, /actions=(output|FLOOD)/);
+    assert.doesNotMatch(
+      learnedFlows,
+      /actions=NORMAL/,
+      'flows come from the controller',
+    );
+    await atPrompt('exit', SHELL_PROMPT, 60000);
+    await sh('mn -c && echo CLEAN_OK', 45000);
+    pass('mn.controller.clean');
+
+    await atPrompt('python3 lab.py', /mininet> $/, 120000);
+    requireMatch(
+      'lab.controller',
+      await controllerStatus(),
+      /is_connected\s*: true/,
+    );
+    requireMatch(
+      'lab.pingall',
+      await command('pingall', 120000),
+      /0% dropped \(2\/2 received\)/,
+    );
+    await atPrompt('exit', SHELL_PROMPT, 60000);
+    await sh('mn -c && echo CLEAN_OK', 45000);
+    pass('lab.clean');
 
     await command('mn --switch ovsbr --controller none --topo single,2');
     const ping = await command('pingall 1');
