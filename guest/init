@@ -52,7 +52,10 @@ Demo network (hosts h1 and h2, switch s1):
 That opens the Mininet CLI. Try nodes, net, pingall, and help.
 exit returns to this shell.
 
-Or start your own topology:
+Or start your own topology with controller c0 and OVSSwitch:
+  mn --topo single,2
+
+Standalone switch without a controller:
   mn --switch ovsbr --controller none --topo single,2
 EOF
 

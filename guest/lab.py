@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Two real network namespaces, veth links, and an Open vSwitch bridge."""
+"""Two real network namespaces, veth links, and an OpenFlow switch with a controller."""
 from mininet.net import Mininet
-from mininet.node import OVSBridge
+from mininet.node import OVSController, OVSSwitch
 from mininet.cli import CLI
 from mininet.log import setLogLevel
 
 setLogLevel('info')
-net = Mininet(switch=OVSBridge, controller=None, autoSetMacs=True)
+net = Mininet(switch=OVSSwitch, controller=OVSController, autoSetMacs=True)
 try:
+    net.addController('c0')
     h1 = net.addHost('h1', ip='10.0.0.1/24')
     h2 = net.addHost('h2', ip='10.0.0.2/24')
     s1 = net.addSwitch('s1')

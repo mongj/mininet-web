@@ -4,6 +4,7 @@
 ARG TARGET_PLATFORM=linux/386
 FROM --platform=$TARGET_PLATFORM alpine:3.21 AS builder
 ARG MININET_VERSION=2.3.0
+ARG OVS_VERSION=2.17.11-r0
 RUN apk add --no-cache \
     gcc=14.2.0-r4 \
     musl-dev=1.2.5-r12 \
@@ -13,6 +14,10 @@ RUN curl -fL https://codeload.github.com/mininet/mininet/tar.gz/refs/tags/${MINI
     && tar -xzf /tmp/mininet.tar.gz -C /tmp \
     && mv /tmp/mininet-* /src
 RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
+# openvswitch-test depends on twisted; install it into a scratch root and ship only the controller binary.
+RUN apk add --no-cache --root /ovs --initdb \
+    --keys-dir /etc/apk/keys --repositories-file /etc/apk/repositories \
+    openvswitch-test=${OVS_VERSION}
 
 # Build guest rootfs and copy compiled mininet from builder
 FROM --platform=$TARGET_PLATFORM alpine:3.21
@@ -54,6 +59,7 @@ RUN apk add --no-cache \
 
 COPY --from=builder /src/bin/mn /usr/bin/mn
 COPY --from=builder /mnexec /usr/bin/mnexec
+COPY --from=builder /ovs/usr/bin/ovs-testcontroller /usr/bin/ovs-testcontroller
 COPY --from=builder /src/mininet /usr/lib/python3.12/site-packages/mininet
 COPY --from=builder /src/examples /usr/lib/python3.12/site-packages/mininet/examples
 COPY --from=builder /src/LICENSE /usr/share/licenses/mininet/LICENSE
