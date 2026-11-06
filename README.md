@@ -65,7 +65,7 @@ scripts/                     Asset packaging and headless VM verification
 wrangler.jsonc               Manual Workers deployment configuration
 ```
 
-The network starts in OVS standalone learning mode; no SDN controller is bundled. The shell starts in `/root/playground` (`~/playground`); files there are saved in the browser; the rest of the guest filesystem is not persisted.
+`mn` starts an `OVSSwitch` connected to the bundled `ovs-testcontroller` (Open vSwitch 2.17.11, a learning-switch reference controller) as `c0`, so `ovs-ofctl dump-flows s1` shows the flows the controller installs. For a standalone switch with no controller (OVS `actions=NORMAL`), run `mn --switch ovsbr --controller none`. The demo `lab.py` uses the controller too. The shell starts in `/root/playground` (`~/playground`); files there are saved in the browser; the rest of the guest filesystem is not persisted.
 
 The worker serves `/root/playground` to the guest over 9P and to the page through the same server, so the Explorer and editor see what the shell sees, and the worker reports the guest's changes back to them. When OPFS is locked by another tab or unavailable, the same folder is served from memory instead: the Explorer and editor keep working, and the files last until the reload. The pane layout is saved in `localStorage`.
 
@@ -111,6 +111,7 @@ These components are distributed with the app and stay under their own licenses:
 
 - [v86](https://github.com/copy/v86), 0.5.471 — BSD-2-Clause; `public/vm/v86.LICENSE`.
 - [Mininet 2.3.0](https://github.com/mininet/mininet/tree/2.3.0) — BSD; license inside the guest at `/usr/share/licenses/mininet/LICENSE` and in `public/pyright/mininet.json`.
+- [Open vSwitch](https://www.openvswitch.org/) `ovs-testcontroller`, 2.17.11 — Apache-2.0; installed from the Alpine `openvswitch-test` package, only the binary is shipped.
 - [xterm.js](https://github.com/xtermjs/xterm.js) — MIT; notices in `public/vm/`.
 - [Monaco Editor](https://github.com/microsoft/monaco-editor) — MIT.
 - [Dockview](https://github.com/dockview/dockview) — MIT.
