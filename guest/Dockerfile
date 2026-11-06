@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.12
+# syntax=docker/dockerfile:1.12@sha256:93bfd3b68c109427185cd78b4779fc82b484b0b7618e36d0f104d4d801e66d25
 
 # Build mininet from source
 ARG TARGET_PLATFORM=linux/386
-FROM --platform=$TARGET_PLATFORM alpine:3.21 AS builder
+FROM --platform=$TARGET_PLATFORM alpine:3.21@sha256:87a4361f6c819618a6bafa2ed5228714cb0bb22195d2b49c95eb26799990128a AS builder
 ARG MININET_VERSION=2.3.0
 RUN apk add --no-cache \
     gcc=14.2.0-r4 \
@@ -15,7 +15,7 @@ RUN curl -fL https://codeload.github.com/mininet/mininet/tar.gz/refs/tags/${MINI
 RUN gcc -DVERSION=\"2.3.0\" -Wall -O2 /src/mnexec.c -o /mnexec
 
 # Build guest rootfs and copy compiled mininet from builder
-FROM --platform=$TARGET_PLATFORM alpine:3.21
+FROM --platform=$TARGET_PLATFORM alpine:3.21@sha256:87a4361f6c819618a6bafa2ed5228714cb0bb22195d2b49c95eb26799990128a
 RUN apk add --no-cache \
     linux-virt=6.12.112-r0 \
     python3~3.12 \
