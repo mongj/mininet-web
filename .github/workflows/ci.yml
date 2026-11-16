@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - run: corepack enable
@@ -25,3 +25,4 @@ jobs:
           cache: yarn
       - run: yarn install --immutable
       - run: yarn verify
+      - run: yarn test:vm
